@@ -16,6 +16,8 @@
 #  define DEBUG_MSG(x) do {} while (0)
 #endif
 
+# define ASSERT_EXPR(test,count){if(test){}else{std::cout << "[-- failed assertion --](" << __FILE__ <<  " line "<< __LINE__ <<"): " <<  #test << std::endl;count++;}}
+
 #if defined(WIN32)
   #include <cstdint>
 #else
@@ -112,6 +114,24 @@ public:
 
   /// method to read the cine header
   void read_header(const char * file_name);
+
+  /// return pointer to the cine file header
+  CineFileHeader * header(){return &header_;}
+
+  /// return pointer to the bitmap header
+  BitmapHeader * bitmap_header(){return &bitmap_header_;}
+
+  /// return a pointer to the image offsets
+  std::vector<int64_t> * image_offsets(){return &image_offsets_;}
+
+  /// return the filename
+  std::string file_name()const{return file_name_;}
+
+  /// return the bit depth
+  Bit_Depth bit_depth() const{return bit_depth_;}
+
+  /// return a pointer to the raw data
+  std::vector<char> * data(){return & data_;}
 
 private:
   /// struct to hold information such as the indexing into each frame of the video
