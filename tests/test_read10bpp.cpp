@@ -12,8 +12,7 @@ int main(int argc, char *argv[]) {
   try {
     HyperCine hc("./images/packed_12bpp.cine");
     HyperCine::HyperFrame hf;
-    hf.frame_begin = 60;
-    hf.frame_count = 6; // 60, 61, 62, 63, 64, 65
+    hf.add_frames(60,6); // 60, 61, 62, 63, 64, 65
     // don't add any regions of interest so the whole image is read on the first iteration
     hc.read_buffer(hf);
     std::cout << hc << std::endl;
@@ -31,22 +30,28 @@ int main(int argc, char *argv[]) {
 
     // now try reading two small regions of interest from the same file
     hf.clear();
-    hf.frame_begin = 60;
-    hf.frame_count = 6;
-
-    hf.x_begin.push_back(84);
-    hf.y_begin.push_back(61);
-    hf.x_count.push_back(89);
-    hf.y_count.push_back(46);
-
-    hf.x_begin.push_back(169);
-    hf.y_begin.push_back(17);
-    hf.x_count.push_back(38);
-    hf.y_count.push_back(20);
-
+    hf.add_frame(60);
+    hf.add_frame(61);
+    hf.add_frame(62);
+    hf.add_frame(63);
+    hf.add_frame(64);
+    hf.add_frame(65);
+    hf.add_window(84,89,61,46);
+    hf.add_window(169,38,17,20);
     hc.read_buffer(hf);
     std::cout << hc << std::endl;
-
+    if(!hc.valid_frame_window(65,0)){
+      std::cout << "invalid frame or window" << std::endl;
+      error_count ++;
+    }
+    if(!hc.valid_frame_window(60,1)){
+      std::cout << "invalid frame or window" << std::endl;
+      error_count ++;
+    }
+    if(hc.valid_frame_window(42,0)){
+      std::cout << "invalid frame or window should have been caught" << std::endl;
+      error_count ++;
+    }
     cv::Mat img_roi_0(hc.height(0),hc.width(0),CV_8UC1,hc.data(65,0));
     cv::Mat img_roi_1(hc.height(1),hc.width(1),CV_8UC1,hc.data(60,1));
     // cv::imwrite("packed_12bpp_frame_65_roi.tiff",img_roi);

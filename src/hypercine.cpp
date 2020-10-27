@@ -8,6 +8,7 @@
 
 namespace hypercine {
 
+// hash table to convert 12bit integer values from the 10-bit packed format to 8 bit image intensity values
 const static uint8_t Lin8UT[1024] =
  {0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,
    8,8,8,8,9,9,9,9,10,10,10,10,11,11,11,11,12,12,12,12,13,13,13,13,14,14,14,14,15,15,
@@ -50,46 +51,30 @@ HyperCine::HyperCine(const char * file_name):
   read_header(file_name);
 }
 
-size_t
-HyperCine::width(const int roi)const{
-  if(roi<0)return bitmap_header_.width;
-  else{
-    if(roi>=roi_widths_.size()){
-      throw std::invalid_argument("error: invalid roi");
-    }
-    return roi_widths_[roi];
+/// check for valid frame and window id:
+bool
+HyperCine::valid_frame_window(const int frame, const size_t window_id){
+  if(data_indices_.size()==0){
+    std::cout << "error: data is not initialized yet" << std::endl;
+    return false;
   }
-}
-
-size_t
-HyperCine::height(const int roi)const{
-  if(roi<0)return bitmap_header_.height;
-  else{
-    if(roi>=roi_heights_.size()){
-      throw std::invalid_argument("error: invalid roi");
-    }
-    return roi_heights_[roi];
-  }
-}
-
-/// return a pointer to the raw data for a given frame, roi
-char *
-HyperCine::data(const int & frame, const size_t roi){
-  if(roi_data_indices_.size()==0){
-    std::cerr << "error: data is not initialized yet" << std::endl;
-    throw std::exception();
-  }
-  if(frame<header_.first_image_no||frame>header_.first_image_no+header_.image_count){
-    std::cerr << "error: invalid frame number: " << frame << " first frame " << header_.first_image_no <<
+  if(hf_.frame_ids_view()->find(frame)==hf_.frame_ids_view()->end()){
+    std::cout << "error: invalid frame number: " << frame  << " not found in buffer frames" << std::endl;
+    std::cout << " first frame in file " << header_.first_image_no <<
         " last frame " << header_.first_image_no + header_.image_count << std::endl;
-    throw std::exception();
+    return false;
   }
-  if(roi < 0|| roi>=roi_data_indices_[0].size()){
-    std::cerr << "error: invalid roi: " << roi << std::endl;
-    throw std::exception();
+  if(window_id>=hf_.num_windows()){
+    std::cout << "error: invalid window id: " << window_id << std::endl;
+    return false;
   }
-  const int frame_index = frame - header_.first_image_no;
-  return &data_[roi_data_indices_[frame_index][roi]];
+  return true;
+}
+
+/// return a pointer to the raw data for a given frame and window
+char *
+HyperCine::data(const int frame, const size_t window_id){
+  return &data_[data_indices_.find(frame)->second[window_id]];
 }
 
 void
@@ -232,57 +217,36 @@ HyperCine::read_header(const char * file_name){
 
 void
 HyperCine::read_buffer(HyperFrame & hf){
-  if(!hf.is_valid()){
-    throw std::invalid_argument("invalid HyperFrame");
+  hf_ = hf; // store a copy of the
+  // check that the bounds on the hyperframe are valid
+  if(hf_.num_frames()<=0)
+    throw std::invalid_argument("invalid HyperFrame (no frames)");
+  for(std::set<int>::const_iterator set_it = hf_.frame_ids_view()->begin();set_it!=hf_.frame_ids_view()->end();++set_it){
+    if(*set_it-header_.first_image_no<0||*set_it>header_.first_image_no + header_.image_count){
+      std::cerr << "inavlid frame requested: " << *set_it << std::endl;
+      std::cerr << "first frame no: " << header_.first_image_no << std::endl;
+      std::cerr << "last frame no: " << header_.first_image_no + header_.image_count << std::endl;
+      throw std::invalid_argument("invalid HyperFrame (includes inavlid frame)");
+    }
+  }
+  // check if the HyperFrame window data is empty, if so create default bounds of the entire image
+  if(hf_.num_windows()==0)
+    hf_.add_window(0,bitmap_header_.width,0,bitmap_header_.height);
+  for(size_t i=0;i<hf_.num_windows();++i){
+    if(hf_.window_x_begin(i) < 0 || hf_.window_x_begin(i) + hf_.window_width(i) > bitmap_header_.width)
+      throw std::invalid_argument("invalid HyperFrame window (window x_begin < 0 or window x_begin + window_width > image width)");
+    if(hf_.window_y_begin(i) < 0 || hf_.window_y_begin(i) + hf_.window_height(i) > bitmap_header_.height)
+      throw std::invalid_argument("invalid HyperFrame window (window y_begin < 0 or window y_begin + window_height > image height)");
   }
   // clear the buffer
   data_.clear();
-  roi_data_indices_.clear();
-  roi_widths_.clear();
-  roi_heights_.clear();
-  // check the bounds on the hyperframe dimensions
-  const int frame_begin_index = hf.frame_begin-header_.first_image_no;
-  if(frame_begin_index < 0 || frame_begin_index>header_.image_count){
-    std::cerr << "first frame no: " << header_.first_image_no << std::endl;
-    std::cerr << "frame begin: " << hf.frame_begin << std::endl;
-    std::cerr << "frame begin index: " << frame_begin_index << std::endl;
-    throw std::invalid_argument("invalid frame begin");
-  }
-  if(hf.frame_count>header_.image_count){
-    std::cerr << "frame count: " << hf.frame_count << std::endl;
-    std::cerr << "num frames: " << header_.image_count << std::endl;
-    throw std::invalid_argument("invalid frame count");
-  }
-  // check if the hyperframe region of interest data is empty, if so create default bounds
-  if(hf.x_begin.size()==0){
-    hf.y_begin.clear();
-    hf.y_count.clear();
-    hf.x_count.clear();
-    hf.x_begin.push_back(0);
-    hf.y_begin.push_back(0);
-    hf.x_count.push_back(bitmap_header_.width);
-    hf.y_count.push_back(bitmap_header_.height);
-  }
-  for(size_t i=0;i<hf.num_rois();++i){
-    if(hf.x_begin[i]<0||hf.x_begin[i]+hf.x_count[i]>bitmap_header_.width){
-      std::cerr << "invalid region of interest in x, hyperframe " << i << std::endl;
-      throw std::exception();
-    }
-    if(hf.y_begin[i]<0||hf.y_begin[i]+hf.y_count[i]>bitmap_header_.height){
-      std::cerr << "invalid region of interest in y, hyperframe " << i << std::endl;
-      throw std::exception();
-    }
-  }
+  data_indices_.clear();
 
   // setup the storages
-
-  roi_widths_ = hf.x_count;
-  roi_heights_ = hf.y_count;
-
-  roi_data_indices_.resize(hf.frame_count);
-  for(size_t i=0;i<hf.frame_count;++i)
-    roi_data_indices_[i].resize(hf.num_rois());
-  DEBUG_MSG("HyperCine::read_buffer(): num pixels per frame " << hf.num_pixels_per_frame());
+  for(std::set<int>::const_iterator set_it = hf_.frame_ids_view()->begin();set_it!=hf_.frame_ids_view()->end();++set_it){
+    data_indices_.insert(std::pair<int,std::vector<size_t> >(*set_it,std::vector<size_t>(hf_.num_windows(),0)));
+  }
+  DEBUG_MSG("HyperCine::read_buffer(): total num pixels per frame " << hf_.num_pixels_per_frame());
   if(bitmap_header_.bit_depth==BIT_DEPTH_8){
     throw std::invalid_argument("bit depth not implemented yet");
   }
@@ -291,9 +255,9 @@ HyperCine::read_buffer(HyperFrame & hf){
   }
   else if (bitmap_header_.bit_depth==BIT_DEPTH_10_PACKED){
     // need one bytes per pixel per frame, data array is sized in one byte (char) increments
-    data_.resize(hf.num_pixels_per_frame()*hf.frame_count);
+    data_.resize(hf_.num_pixels_per_frame()*hf_.num_frames());
     DEBUG_MSG("HyperCine::read_buffer(): data storage size " << data_.size());
-    read_hyperframe_10_bit_packed(hf);
+    read_hyperframe_10_bit_packed();
   }
   else{
     throw std::invalid_argument("invalid bit depth");
@@ -301,12 +265,12 @@ HyperCine::read_buffer(HyperFrame & hf){
 }
 
 void
-HyperCine::read_hyperframe_10_bit_packed(const HyperFrame & hf){
+HyperCine::read_hyperframe_10_bit_packed(){
   DEBUG_MSG("HyperCine::read_hyperframe_10_bit_packed():");
 
   // chunks of memory will be read into a buffer on region of intertest and one frame at a time
-  // current strategy is to read one row of one roi, but only the width of the roi for each read
-  // and seekg between each row of the roi to skip the rest of the row
+  // current strategy is to read one row of one frame region, but only the width of the frame region for each read
+  // and seekg between each row of the frame region to skip the rest of the row
 
   // open the file
   std::ifstream cine_file(file_name_.c_str(), std::ios::in | std::ios::binary);
@@ -314,48 +278,52 @@ HyperCine::read_hyperframe_10_bit_packed(const HyperFrame & hf){
     std::cerr << "Error, can't open the file: " << file_name_ << std::endl;
     throw std::exception();
   }
-  // the buffer needs to be sized as big as the largest row among the rois in the hyperframe
-  const int roi_row_buffer_size = ceil(((hf.max_pixels_per_roi_row()+1)*10)/8); // 10 bits per pixel divided by 8 to get bytes, +1 to oversize
-  assert(((hf.max_pixels_per_roi_row()+1)*10)/8<=roi_row_buffer_size);
-  std::vector<char> roi_row_buffer(roi_row_buffer_size);
-  DEBUG_MSG("HyperCine::read_buffer(): roi row buffer storage size " << roi_row_buffer.size());
+  // the buffer needs to be sized as big as the largest row among the frame regions in the hyperframe
+  const int frame_region_row_buffer_size = ceil(((hf_.buffer_row_size()+1)*10)/8); // 10 bits per pixel divided by 8 to get bytes, +1 to oversize
+  assert(((hf_.buffer_row_size()+1)*10)/8<=frame_region_row_buffer_size);
+  std::vector<char> frame_region_row_buffer(frame_region_row_buffer_size);
+  DEBUG_MSG("HyperCine::read_buffer(): frame_region row buffer storage size " << frame_region_row_buffer.size());
   // position to the first frame in this set:
-  uint8_t * roi_row_buff_ptr = reinterpret_cast<uint8_t*>(&roi_row_buffer[0]);
+  uint8_t * frame_region_row_buff_ptr = reinterpret_cast<uint8_t*>(&frame_region_row_buffer[0]);
   uint16_t intensity_16 = 0.0;
   uint16_t intensity_16p1 = 0.0;
   uint16_t two_byte = 0;
   size_t total_px_read = 0;
   // iterate the frames (the frame number needs to be offset with first_image_no because hf.frame is the global frame id,
   // which is not necessarily 0-based
-  const size_t frame_begin_index = hf.frame_begin - header_.first_image_no;
-  for(size_t frame=frame_begin_index;frame<frame_begin_index+hf.frame_count;++frame){
+//  const size_t frame_begin_index = hf.frame_begin - header_.first_image_no;
+  for(std::set<int>::const_iterator set_it = hf_.frame_ids_view()->begin();set_it!=hf_.frame_ids_view()->end();++set_it){
+    const size_t frame = *set_it - header_.first_image_no;
+//  for(size_t frame=frame_begin_index;frame<frame_begin_index+hf.frame_count;++frame){
     const int64_t frame_offset = image_offsets_[frame] + header_.header_offset;
     // iterate the regions of interest
-    for(size_t roi=0;roi<hf.num_rois();++roi){
-      const int xbegin_mod_4 = hf.x_begin[roi]%4;
-      roi_data_indices_[frame][roi] = total_px_read;
-      // iterate the roi rows
-      for(size_t row=hf.y_begin[roi];row<hf.y_begin[roi]+hf.y_count[roi];++row){
+    for(size_t window=0; window<hf_.num_windows();++window){
+      const size_t window_width = hf_.window_width(window);
+      const size_t window_x_begin = hf_.window_x_begin(window);
+      const int xbegin_mod_4 = hf_.window_x_begin(window)%4;
+      data_indices_.find(*set_it)->second[window] = total_px_read;
+      // iterate the frame_region rows
+      for(size_t row=hf_.window_y_begin(window);row<hf_.window_y_begin(window)+hf_.window_height(window);++row){
         const size_t row_inc = row*bitmap_header_.width;
-        // determine the position of the first pixel in the this row of this roi
-        const int64_t begin_roi_row = frame_offset + ((row_inc + hf.x_begin[roi])*10)/8; // convert the number of pixels up to this point to number of bytes to hold 10bit pixel values
-        cine_file.seekg(begin_roi_row);
-        cine_file.read(&roi_row_buffer[0],roi_row_buffer_size);
+        // determine the position of the first pixel in the this row of this frame region
+        const int64_t begin_frame_region_row = frame_offset + ((row_inc + window_x_begin)*10)/8; // convert the number of pixels up to this point to number of bytes to hold 10bit pixel values
+        cine_file.seekg(begin_frame_region_row);
+        cine_file.read(&frame_region_row_buffer[0],frame_region_row_buffer_size);
         // unpack the 10 bit image data from the array
-        for(size_t px=0;px<hf.x_count[roi];++px){
+        for(size_t px=0;px<window_width;++px){
           // and now to index into the strange beast that is 10bit packed cine files...
           // this looks strange because the ten bits are shared across bytes, the first byte has 1 10bit number, with 2 bits spilling into the
           // next byte. The second byte has 2 leftover bits from the first 10bit number, 6 bits from the current 10bit value and spills 4 into the next byte
           // the third byte has 4 bits from the third 10bit value, 4 bits of its own 10bit value and spills 6 bits into the next byte
           // the fourth byte has 6 bits from the last 10bit value, 2 bits of its own, and spills 8 into the next byte, filling that byte
           // so in total it takes 5 bytes for every 4 10bit values
-          const size_t col_inc = px+hf.x_begin[roi];
+          const size_t col_inc = px+window_x_begin;
           const size_t slot = (px+xbegin_mod_4)*10/8 - xbegin_mod_4;
           const size_t chunk_offset = col_inc%4; // 5 bytes per four pixels
           // create the single 16 bit combo
-          intensity_16p1 = roi_row_buff_ptr[slot+1];
+          intensity_16p1 = frame_region_row_buff_ptr[slot+1];
           intensity_16p1 <<= 8; // move the bits over to the beginning of the byte
-          intensity_16 = roi_row_buff_ptr[slot];
+          intensity_16 = frame_region_row_buff_ptr[slot];
           two_byte = intensity_16 | intensity_16p1;
           endian_swap(two_byte);
           // shift the 10 bits to the right side of the 16 bit data type;
@@ -366,8 +334,8 @@ HyperCine::read_hyperframe_10_bit_packed(const HyperFrame & hf){
           // now we are compressing it back to 8 bit:
           data_[total_px_read++] = Lin8UT[two_byte];
         } // end pixel iterator
-      } // end roi row iterator
-    } // end roi iterator
+      } // end frame_region row iterator
+    } // end frame_region iterator
   } // end frame iterator
   cine_file.close();
 }
@@ -375,32 +343,20 @@ HyperCine::read_hyperframe_10_bit_packed(const HyperFrame & hf){
 /// overload the ostream operator
 std::ostream& operator<<(std::ostream& os,
   const HyperCine & hc){
-  if(hc.roi_data_indices_.size()>0)
-    os << "HyperCine: num frames in data: " << hc.roi_data_indices_.size() << std::endl;
-  else{
-    os << "HyperCine: no frames in data" << std::endl;
-    return os;
-  }
-  if(hc.roi_data_indices_[0].size()>0)
-    os << "HyperCine: num rois in data: " << hc.roi_data_indices_[0].size() << std::endl;
-  else{
-    os << "HyperCine: no rois in data" << std::endl;
-    return os;
-  }
+  os << "HyperCine: num frames in data: " << hc.hf_.num_frames() << std::endl;
+  os << "HyperCine: num windows per frame: " << hc.hf_.num_windows() << std::endl;
   os << "HyperCine: " << std::left << std::setw(12) << "frame"
-      << std::left << std::setw(12) << "roi"
+      << std::left << std::setw(12) << "window"
       << std::left << std::setw(12) << "data_index"
       << std::left << std::setw(12) << "width"
       << std::left << std::setw(12) << "height" << std::endl;
-  for(size_t frame=0;frame<hc.roi_data_indices_.size();++frame){
-    for(size_t roi=0;roi<hc.roi_data_indices_[frame].size();++roi){
-      os << "HyperCine: "  << std::left << std::setw(12) << frame
-          << std::left << std::setw(12) << roi
-          << std::left << std::setw(12) << hc.roi_data_indices_[frame][roi]
-          << std::left << std::setw(12) << hc.roi_widths_[roi]
-          << std::left << std::setw(12) << hc.roi_heights_[roi];
-      if(frame<hc.roi_data_indices_.size()-1||(frame==hc.roi_data_indices_.size()-1 && roi<hc.roi_data_indices_[frame].size()-1))
-        os << std::endl;
+  for(std::set<int>::const_iterator set_it = hc.hf_.frame_ids_view()->begin();set_it!=hc.hf_.frame_ids_view()->end();++set_it){
+    for(size_t window=0;window<hc.hf_.num_windows();++window){
+      os << "HyperCine: "  << std::left << std::setw(12) << *set_it
+          << std::left << std::setw(12) << window
+          << std::left << std::setw(12) << hc.data_indices_.find(*set_it)->second[window]
+          << std::left << std::setw(12) << hc.hf_.window_width(window)
+          << std::left << std::setw(12) << hc.hf_.window_height(window) << std::endl;
     }
   }
   return os;
