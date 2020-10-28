@@ -17,6 +17,7 @@
 #endif
 
 # define ASSERT_EXPR(test,count){if(test){}else{std::cout << "[-- failed assertion --](" << __FILE__ <<  " line "<< __LINE__ <<"): " <<  #test << std::endl;count++;}}
+# define MAX_WRITE_FRAMES 20000
 
 #if defined(WIN32)
   #include <cstdint>
@@ -274,6 +275,13 @@ public:
   /// return a pointer to the raw data for a given frame, and window
   char * data(const int frame, const size_t window_id);
 
+  // char* data = (char*)cv::Mat.data;
+  // write a frame to cine file
+  static void write_frame(const char * file_name, const size_t width, const size_t height, char * data, const bool overwrite=false);
+
+  // write a cine file header
+  static void write_header(const char * file_name, const size_t width, const size_t height);
+
   /// send hc to ostreams like cout
   friend std::ostream& operator<<(std::ostream& os, const HyperCine & hc);
 
@@ -283,6 +291,9 @@ private:
 
   /// method to read a hyperframe into the buffer for a 10bit packed cine file
   void read_hyperframe_10_bit_packed();
+
+  /// method to read a hyperframe into the buffer for an 8bit cine file
+  void read_hyperframe_8_bit();
 
   /// struct to hold information such as the indexing into each frame of the video
   CineFileHeader header_;
