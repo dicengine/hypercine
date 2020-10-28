@@ -33,4 +33,13 @@ SET (HYPERCINE_HEADERS
 add_library(hypercine ${HYPERCINE_SOURCES} ${HYPERCINE_HEADERS})
 target_compile_definitions(hypercine PRIVATE -D HYPERCINE_LIB_EXPORTS_MODE)
 
-add_subdirectory(tests)
+IF(DEFINED OpenCV_DIR)
+  message(STATUS "Looking for OpenCV in dir: ${OpenCV_DIR}")
+  find_package( OpenCV NO_DEFAULT_PATH PATHS ${OpenCV_DIR} )
+  IF(NOT OpenCV_FOUND)
+    message(FATAL_ERROR "OpenCV not found. OpenCV is required for building tests and tools")
+  ENDIF()
+  # only add tests and tools for OpenCV builds
+  add_subdirectory(tests)
+  add_subdirectory(tools)
+ENDIF()

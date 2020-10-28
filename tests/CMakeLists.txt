@@ -1,22 +1,5 @@
 enable_testing()
 
-# Try to find OpenCV, if path was not given
-IF (NOT DEFINED OpenCV_DIR)
-  # Losely based on:
-  # https://github.com/trilinos/Trilinos_tutorial/wiki/CMakeFindPackageTrilinosExample
-  # /usr/share/doc/opencv-doc/examples/face/CMakeLists.txt
-  # * Find OpenCV
-  message(STATUS "OpenCV_DIR not specified, looking in default paths")
-  find_package(OpenCV REQUIRED)
-ELSE()
-  message(STATUS "Looking for OpenCV in dir: ${OpenCV_DIR}")
-  find_package( OpenCV NO_DEFAULT_PATH PATHS ${OpenCV_DIR} )
-ENDIF()
-IF(OpenCV_FOUND)
-ELSE()
-  message(FATAL_ERROR "OpenCV not found. OpenCV is required")
-ENDIF()
-
 # copy the image files to the build dir
 FILE ( GLOB img_files "${CMAKE_CURRENT_SOURCE_DIR}/images/*.*")
 FOREACH ( img_file ${img_files} )

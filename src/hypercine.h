@@ -15,6 +15,8 @@
 #else
 #  define DEBUG_MSG(x) do {} while (0)
 #endif
+// buffer output macros (for interfacing with javascript):
+#define BUFFER_MSG(var,val) do { std::cout << "[--BUFFER_OUT--]: " << var <<  " " << val << std::endl; } while (0)
 
 # define ASSERT_EXPR(test,count){if(test){}else{std::cout << "[-- failed assertion --](" << __FILE__ <<  " line "<< __LINE__ <<"): " <<  #test << std::endl;count++;}}
 # define MAX_WRITE_FRAMES 20000
@@ -128,6 +130,10 @@ public:
   HyperFrame{
     // constructor
     HyperFrame(){};
+    // constructor with frame id
+    HyperFrame(const int frame, const int count=1){
+      add_frames(frame,count);
+    };
     // copy constructor
     HyperFrame(const HyperFrame & hf){
       frame_ids = hf.get_frame_ids();
@@ -147,13 +153,9 @@ public:
       y_count.clear();
     }
     // add a range of frames to the hyperframe
-    void add_frames(const int frame_begin, const int count){
+    void add_frames(const int frame_begin, const int count=1){
       for(int i=frame_begin;i<frame_begin+count;++i)
         frame_ids.insert(i);
-    }
-    // add a single frame to the hyperframe
-    void add_frame(const int frame_id){
-        frame_ids.insert(frame_id);
     }
     // return a deep copy of the frame id set
     std::set<int> get_frame_ids()const{
@@ -266,6 +268,16 @@ public:
     else return hf_.window_height(window_id);
   };
 
+  /// return the first frame id
+  int file_first_frame_id()const{
+    return header_.first_image_no;
+  }
+
+  /// return the first frame id
+  int file_frame_count()const{
+    return header_.image_count;
+  }
+
   /// return a pointer to the raw data
   std::vector<char> * data(){return & data_;}
 
@@ -273,7 +285,7 @@ public:
   bool valid_frame_window(const int frame, const size_t window_id);
 
   /// return a pointer to the raw data for a given frame, and window
-  char * data(const int frame, const size_t window_id);
+  char * data(const int frame, const size_t window_id=0);
 
   // char* data = (char*)cv::Mat.data;
   // write a frame to cine file

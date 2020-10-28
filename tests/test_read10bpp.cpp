@@ -11,8 +11,7 @@ int main(int argc, char *argv[]) {
   int error_count = 0;
   try {
     HyperCine hc("./images/packed_12bpp.cine");
-    HyperCine::HyperFrame hf;
-    hf.add_frames(60,6); // 60, 61, 62, 63, 64, 65
+    HyperCine::HyperFrame hf(60,6); // 60, 61, 62, 63, 64, 65
     // don't add any regions of interest so the whole image is read on the first iteration
     hc.read_buffer(hf);
     std::cout << hc << std::endl;
@@ -30,12 +29,12 @@ int main(int argc, char *argv[]) {
 
     // now try reading two small regions of interest from the same file
     hf.clear();
-    hf.add_frame(60);
-    hf.add_frame(61);
-    hf.add_frame(62);
-    hf.add_frame(63);
-    hf.add_frame(64);
-    hf.add_frame(65);
+    hf.add_frames(60);
+    hf.add_frames(61);
+    hf.add_frames(62);
+    hf.add_frames(63);
+    hf.add_frames(64);
+    hf.add_frames(65);
     hf.add_window(84,89,61,46);
     hf.add_window(169,38,17,20);
     hc.read_buffer(hf);
