@@ -21,6 +21,8 @@ int main(int argc, char *argv[]) {
 
     BUFFER_MSG("FIRST_FRAME_ID",first_frame_id);
     BUFFER_MSG("FRAME_COUNT",frame_count);
+    BUFFER_MSG("FRAME_WIDTH",hc.width());
+    BUFFER_MSG("FRAME_HEIGHT",hc.height());
     return 0;
 
   }else{
