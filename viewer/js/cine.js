@@ -3,6 +3,17 @@ var frameCount = 0;
 var frameWidth = 0;
 var frameHeight = 0;
 
+$(window).load(function(){
+    execDir = __dirname;
+    if(os.platform()=='win32'){
+        execDir += '\\..\\build\\tools\\fetch_cine.exe';
+    }else{
+        execDir += '/../build/tools/fetch_cine';
+    }
+    $("#execTextSpan").text(execDir);
+    $("#wdTextSpan").text(os.homedir());
+});
+
 //these three transform a string into a file object                                                                               
 var getFileBlob = function (url, cb) {
     var xhr = new XMLHttpRequest();
@@ -130,7 +141,19 @@ function draw_image(image){
     // clear the divs and clear the plots
     $('#viewer').empty();
     var layout = {
-            showgrid: false,
+            xaxis: {
+                range: [0,frameWidth],
+                showgrid: false,
+                zeroline: false,
+                showline: false,
+            },
+            yaxis: {
+                range: [frameHeight,0],
+                scaleanchor: 'x',
+                showgrid: false,
+                zeroline: false,
+                showline: false,
+            },
             images: [
                 {
                     source: image,
