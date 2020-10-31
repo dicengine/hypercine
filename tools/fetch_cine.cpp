@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     std::string out_file_name = argv[3];
     DEBUG_MSG("requested frame: " << frame);
     if(frame<first_frame_id||frame>=first_frame_id+frame_count){
-      std::cerr << "invalid frame: " << frame << " first frame " << first_frame_id << " last frame " <<
+      std::cout << "invalid frame: " << frame << " first frame " << first_frame_id << " last frame " <<
           first_frame_id + frame_count - 1 << std::endl;
       throw std::invalid_argument("invalid frame requested");
     }
