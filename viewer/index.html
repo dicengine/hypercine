@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>cine_js</title>
+<!-- jQuery library -->
+<script>
+    if (typeof module === 'object') {
+        window.module = module;
+        module = undefined;
+    }
+</script>
+<script src="./js/jquery.min.js"></script>
+<script src="./js/jquery-ui.js"></script>
+<script>
+    if (window.module)
+        module = window.module;
+</script>
+<script src="./js/requires.js" defer></script>
+<script src="./js/plotly.min.js" defer></script>
+<script src="./js/cine.js" defer></script>
+<!-- Local style sheet -->
+<link rel="stylesheet" type="text/css" href="style.css">
+<!-- Google fonts and icons -->
+<link rel="stylesheet" type="text/css" href="open_sans.css">
+<link rel="stylesheet" type="text/css" href="material_icons.css">
+</head>
+<body>
+<div id="frame" class="frame">
+    <div id="info" class="info-banner">
+        <p>
+          <label for="execInput" class="custom-file-input action-li" title="select hypercine executable"> <i class="material-icons md-dark md-br-pad">desktop_mac</i></label>
+          <input id="execInput" type="file" accept="*">
+          <span>hypercine exec: </span><span id="execTextSpan" style="padding-left: 5px;"></span>
+        </p>
+        <p>
+          <label for="wdInput" class="custom-file-input action-li" title="select cine file"> <i class="material-icons md-dark md-br-pad">folder</i></label>
+          <input id="wdInput" type="file" webkitdirectory>
+          <span>working dir: </span><span id="wdTextSpan" style="padding-left: 5px;"></span>
+        </p>
+        <p>
+          <label for="cineInput" class="custom-file-input action-li" title="select cine file"> <i class="material-icons md-dark md-br-pad">add_a_photo</i></label>
+          <input id="cineInput" type="file" accept=".cine">
+          <span>file path: </span><span id="cineTextSpan" style="padding-left: 5px;"></span>
+        </p>
+    </div>
+    <div id="banner" class="banner">
+        <span>dimensions: [</span><span id="frameWidthTextSpan">-</span><span>,</span><span id="frameHeightTextSpan">-</span><span style="padding-right:10px;">]</span>
+        <span>frame range: [</span><span id="frameBeginTextSpan">-</span><span>,</span><span id="frameEndTextSpan">-</span><span style="padding-right:10px;">]</span>
+        <span>frame: </span>
+        <input id="frameSelect" type="text" class="frame-select">
+        <label id="decrementFrame" class="custom-file-input action-li"> <i class="material-icons md-dark md-br-pad">chevron_left</i></label>
+        <label id="advanceFrame" class="custom-file-input action-li"> <i class="material-icons md-dark md-br-pad">chevron_right</i></label>
+    </div>
+    <div id="viewer" class="viewer"><!-- placeholder for plotly plots --></div>
+</div>
+</body>
+</html>
