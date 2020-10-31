@@ -1,5 +1,6 @@
 var frameBegin = 0;
 var frameCount = 0;
+var frameEnd = 0;
 var frameWidth = 0;
 var frameHeight = 0;
 
@@ -14,7 +15,7 @@ $(window).load(function(){
     $("#wdTextSpan").text(os.homedir());
 });
 
-//these three transform a string into a file object                                                                               
+//these three transform a string into a file object
 var getFileBlob = function (url, cb) {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", url);
@@ -40,6 +41,22 @@ var getFileObject = function(filePathOrUrl, cb) {
     });
 };
 
+$("#advanceFrame").on("click",function () {
+    var frame = Number($("#frameSelect").val());
+    frame++;
+    if(frame>frameEnd) return;
+    $("#frameSelect").val(frame);
+    updateView(frame);
+});
+
+$("#decrementFrame").on("click",function () {
+    var frame = Number($("#frameSelect").val());
+    frame--;
+    if(frame<frameBegin) return;
+    $("#frameSelect").val(frame);
+    updateView(frame);
+});
+
 $("#cineInput").on("click",function () {
     this.value = null;
 });
@@ -47,12 +64,12 @@ $("#cineInput").change(function (evt) {
     var tgt = evt.target || window.event.srcElement,
     file = tgt.files[0];
     $("#cineTextSpan").text(file.path);
-    update_cine_info(file.path);
+    updateCineInfo(file.path);
 });
 
 $("#frameSelect").keypress(function(event) { 
     if (event.keyCode === 13) { 
-        update_view(Number($(this).val()));
+        updateView(Number($(this).val()));
     }
 }); 
 
@@ -74,7 +91,7 @@ $("#wdInput").change(function (evt) {
     $("#wdTextSpan").text(file.path);
 });
 
-function update_view(frame){
+function updateView(frame){
     if($("#wdTextSpan").text().length == 0){
         alert('working directory needs to be set');
         return;
@@ -87,7 +104,7 @@ function update_view(frame){
         alert('cine file needs to be selected');
         return;
     }
-    if(frame<frameBegin || frame>frameBegin + frameCount){
+    if(frame<frameBegin || frame>frameEnd){
         alert('invalid frame selected ' + frame);
         return;
     }
@@ -104,9 +121,9 @@ function update_view(frame){
     args.push(displayImageFileName);
     
     // call the filter exec
-    var child_process = require('child_process');
+    var childProcess = require('child_process');
     var readline      = require('readline');
-    var proc = child_process.spawn(execPath,args,{cwd:wd});
+    var proc = childProcess.spawn(execPath,args,{cwd:wd});
 
     proc.on('error', function(){
         alert('Error: fetch_cine failed, invalid executable: ' + execPath);
@@ -121,9 +138,7 @@ function update_view(frame){
             fs.stat(displayImageFileName, function(err, stat) {
                 if(err == null) {
                     getFileObject(displayImageFileName, function (fileObject) {
-                        // TODO load image
-                        alert('loading the image');
-                        draw_image(displayImageFileName);
+                        drawImage(displayImageFileName);
                     });
                 }
             });
@@ -137,7 +152,7 @@ function update_view(frame){
     });
 }
 
-function draw_image(image){
+function drawImage(image){
     // clear the divs and clear the plots
     $('#viewer').empty();
     var layout = {
@@ -166,12 +181,23 @@ function draw_image(image){
                     layer: 'below',
                 }],
     };
+    
+    var config = {
+            modeBarButtonsToAdd: ['drawline',
+                'drawopenpath',
+                'drawclosedpath',
+                'drawcircle',
+                'drawrect',
+                'eraseshape']
+    }
+    
+    
     var divID = "divPlotly";
     $("#viewer").append('<div id="' + divID + '" class="plot_div" style="height:100%; width:100%; float:left;" ></div>');
-    Plotly.plot(document.getElementById(divID),[],layout);
+    Plotly.plot(document.getElementById(divID),[],layout,config);
 }
 
-function update_cine_info(path){
+function updateCineInfo(path){
     if($("#execTextSpan").text().length == 0){
         alert('hypercine exectuable needs to be set');
         return;
@@ -182,9 +208,9 @@ function update_cine_info(path){
     args.push(path);
     
     // call the filter exec
-    var child_process = require('child_process');
+    var childProcess = require('child_process');
     var readline      = require('readline');
-    var proc = child_process.spawn(execPath,args);
+    var proc = childProcess.spawn(execPath,args);
 
     proc.on('error', function(){
         alert('Error: fetch_cine failed, invalid executable: ' + execPath);
@@ -193,6 +219,9 @@ function update_cine_info(path){
         console.log(`fetch_cine exited with code ${code}`);
         if(code!=0){
             alert('Error: fetch_cine failed');
+        }else{
+            $("#frameSelect").val(frameBegin);
+            updateView(frameBegin);
         }
     });
     readline.createInterface({
@@ -201,23 +230,24 @@ function update_cine_info(path){
     }).on('line', function(line) {
         if(line.includes("BUFFER_OUT")&&line.includes("FIRST_FRAME_ID")){
             console.log('setting frameBegin to ' + line.split(' ').pop());
-            frameBegin = line.split(' ').pop();
+            frameBegin = Number(line.split(' ').pop());
             $("#frameBeginTextSpan").text(frameBegin);
         }
         if(line.includes("BUFFER_OUT")&&line.includes("FRAME_COUNT")){
             console.log('setting frameCount to ' + line.split(' ').pop());
-            frameCount = line.split(' ').pop();
-            $("#frameEndTextSpan").text(Number(frameBegin) + Number(frameCount));
+            frameCount = Number(line.split(' ').pop());
+            frameEnd = frameBegin + frameCount - 1;
+            $("#frameEndTextSpan").text(frameEnd);
         }
         if(line.includes("BUFFER_OUT")&&line.includes("FRAME_WIDTH")){
             console.log('setting frameWidth to ' + line.split(' ').pop());
-            frameWidth = line.split(' ').pop();
-            $("#frameWidthTextSpan").text(Number(frameWidth));
+            frameWidth = Number(line.split(' ').pop());
+            $("#frameWidthTextSpan").text(frameWidth);
         }
         if(line.includes("BUFFER_OUT")&&line.includes("FRAME_HEIGHT")){
             console.log('setting frameHeight to ' + line.split(' ').pop());
-            frameHeight = line.split(' ').pop();
-            $("#frameHeightTextSpan").text(Number(frameHeight));
+            frameHeight = Number(line.split(' ').pop());
+            $("#frameHeightTextSpan").text(frameHeight);
         }
         console.log(line);
     });
