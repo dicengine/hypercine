@@ -1,6 +1,17 @@
 #ifndef HYPERCINE_H
 #define HYPERCINE_H
 #if defined(WIN32)
+// disable some common windows compiler warnings that we don't really care about
+#  pragma warning(disable:4018)
+#  pragma warning(disable:4005)
+#  pragma warning(disable:4091)
+#  pragma warning(disable:4244)
+#  pragma warning(disable:4251)
+#  pragma warning(disable:4267)
+#  pragma warning(disable:4297)
+#  pragma warning(disable:4305)
+#  pragma warning(disable:4800)
+#  pragma warning(disable:4996)
 #  if defined(HYPERCINE_LIB_EXPORTS_MODE)
 #    define HYPERCINE_LIB_DLL_EXPORT __declspec(dllexport)
 #  else
@@ -295,7 +306,7 @@ public:
   static void write_header(const char * file_name, const size_t width, const size_t height);
 
   /// send hc to ostreams like cout
-  friend std::ostream& operator<<(std::ostream& os, const HyperCine & hc);
+  friend HYPERCINE_LIB_DLL_EXPORT std::ostream& operator<<(std::ostream& os, const HyperCine & hc);
 
 private:
   /// method to read the cine header

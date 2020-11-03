@@ -7,9 +7,9 @@ var frameHeight = 0;
 $(window).load(function(){
     execDir = __dirname;
     if(os.platform()=='win32'){
-        execDir += '\\..\\build\\tools\\fetch_cine.exe';
+        execDir += '\\..\\build\\bin\\fetch_cine.exe';
     }else{
-        execDir += '/../build/tools/fetch_cine';
+        execDir += '/../build/bin/fetch_cine';
     }
     $("#execTextSpan").text(execDir);
     $("#wdTextSpan").text(os.homedir());

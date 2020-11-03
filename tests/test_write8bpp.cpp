@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
     const int per_image_storage = base_img.rows * base_img.cols; // FIXME factor in bit depth, this assumes 8 bit
     const int total_file_size = header_size + bitmap_header_size + offset_storage_size + per_image_storage*11;
     std::ifstream cine_file(file_name.c_str(), std::ifstream::ate | std::ifstream::binary);
-    ASSERT_EXPR(cine_file.tellg()==total_file_size,error_count);
+    const int file_size = cine_file.tellg();
+    ASSERT_EXPR(file_size==total_file_size,error_count);
     cine_file.close();
 
     // read in the cine file and compare images to gold images

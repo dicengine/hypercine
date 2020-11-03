@@ -32,12 +32,20 @@ SET (HYPERCINE_HEADERS
 
 add_library(hypercine ${HYPERCINE_SOURCES} ${HYPERCINE_HEADERS})
 target_compile_definitions(hypercine PRIVATE -D HYPERCINE_LIB_EXPORTS_MODE)
+install(TARGETS hypercine DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+
 
 IF(DEFINED OpenCV_DIR)
   message(STATUS "Looking for OpenCV in dir: ${OpenCV_DIR}")
   find_package( OpenCV NO_DEFAULT_PATH PATHS ${OpenCV_DIR} )
   IF(NOT OpenCV_FOUND)
     message(FATAL_ERROR "OpenCV not found. OpenCV is required for building tests and tools")
+  ENDIF()
+  IF(WIN32)
+    FILE(GLOB OPENCV_DLLS ${OpenCV_DIR}/x64/vc12/bin/*.dll)
+    FILE(COPY ${OPENCV_DLLS} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
+    FILE(GLOB OPENCV_DLLS ${OpenCV_DIR}/x64/vc15/bin/*.dll)
+    FILE(COPY ${OPENCV_DLLS} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
   ENDIF()
   # only add tests and tools for OpenCV builds
   add_subdirectory(tests)
