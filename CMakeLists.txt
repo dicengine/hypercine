@@ -50,4 +50,5 @@ IF(DEFINED OpenCV_DIR)
   # only add tests and tools for OpenCV builds
   add_subdirectory(tests)
   add_subdirectory(tools)
+  add_subdirectory(performance)
 ENDIF()

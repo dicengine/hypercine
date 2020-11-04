@@ -222,11 +222,14 @@ HyperCine::read_buffer(HyperFrame & hf){
   if(hf_.num_frames()<=0)
     throw std::invalid_argument("invalid HyperFrame (no frames)");
   for(std::set<int>::const_iterator set_it = hf_.frame_ids_view()->begin();set_it!=hf_.frame_ids_view()->end();++set_it){
-    if(*set_it-header_.first_image_no<0||*set_it>header_.first_image_no + header_.image_count){
-      std::cerr << "inavlid frame requested: " << *set_it << std::endl;
-      std::cerr << "first frame no: " << header_.first_image_no << std::endl;
-      std::cerr << "last frame no: " << header_.first_image_no + header_.image_count << std::endl;
-      throw std::invalid_argument("invalid HyperFrame (includes inavlid frame)");
+    int frame = *set_it;
+    int end_frame = header_.first_image_no + header_.image_count;
+    int begin_frame = header_.first_image_no;
+    if(frame<begin_frame||frame>end_frame){
+      std::cerr << "invalid frame requested: " << *set_it << std::endl;
+      std::cerr << "first frame no: " << begin_frame << std::endl;
+      std::cerr << "last frame no: " << end_frame << std::endl;
+      throw std::invalid_argument("invalid HyperFrame (includes invalid frame)");
     }
   }
   // check if the HyperFrame window data is empty, if so create default bounds of the entire image
