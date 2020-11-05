@@ -12,6 +12,8 @@ int main(int argc, char *argv[]) {
   try {
     // create an opencv image by reading in an existing tiff
     cv::Mat base_img = cv::imread("./images/packed_12bpp_frame_60.tiff",cv::IMREAD_GRAYSCALE);
+    ASSERT_EXPR(base_img.type()==CV_8UC1,error_count);
+
     // write one image to clear out the output cine file if it exists
     const std::string file_name = "test_write8bpp.cine";
     HyperCine::write_frame(file_name.c_str(),base_img.cols,base_img.rows,(uint8_t*)base_img.data, true);

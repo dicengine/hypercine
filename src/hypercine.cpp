@@ -65,7 +65,7 @@ HyperCine::valid_frame_window(const int frame,
         " last frame " << header_.first_image_no + header_.image_count << std::endl;
     return false;
   }
-  if(window_id>=hf_.num_windows()){
+  if(window_id<0||window_id>=hf_.num_windows()){
     std::cout << "error: invalid window id: " << window_id << std::endl;
     return false;
   }
@@ -80,6 +80,8 @@ HyperCine::data_8(const int frame,
     std::cerr << "Error, attempting to access the data storage as 8 bit values, but the bit depth for this cine is not 8 bit" << std::endl;
     throw std::exception();
   }
+  if (!valid_frame_window(frame,window_id))
+    throw std::exception();
   return &data_[data_indices_.find(frame)->second[window_id]];
 }
 
@@ -91,6 +93,8 @@ HyperCine::data_16(const int frame,
     std::cerr << "Error, attempting to access the data storage as 16 bit values, but the bit depth for this cine is not 16 bit" << std::endl;
     throw std::exception();
   }
+  if (!valid_frame_window(frame,window_id))
+    throw std::exception();
   return reinterpret_cast<uint16_t*>(&data_[data_indices_.find(frame)->second[window_id]]);
 }
 
@@ -247,7 +251,7 @@ HyperCine::read_buffer(HyperFrame & hf){
     throw std::invalid_argument("invalid HyperFrame (no frames)");
   for(std::set<int>::const_iterator set_it = hf_.frame_ids()->begin();set_it!=hf_.frame_ids()->end();++set_it){
     int frame = *set_it;
-    int end_frame = header_.first_image_no + header_.image_count;
+    int end_frame = header_.first_image_no + header_.image_count - 1;
     int begin_frame = header_.first_image_no;
     if(frame<begin_frame||frame>end_frame){
       std::cerr << "invalid frame requested: " << *set_it << std::endl;
