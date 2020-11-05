@@ -31,6 +31,11 @@
 
 # define ASSERT_EXPR(test,count){if(test){}else{std::cout << "[-- failed assertion --](" << __FILE__ <<  " line "<< __LINE__ <<"): " <<  #test << std::endl;count++;}}
 # define MAX_WRITE_FRAMES 20000
+# define HEADER_SIZE 44  // 36 + sizeof(TIME64)
+# define BITMAP_HEADER_SIZE 40
+# define IMAGE_WIDTH_OFFSET 48  // 36 + sizeof(TIME64) + 4
+# define IMAGE_COUNT_OFFSET 20  // 4 uint16_t and 3 uint32_t
+
 
 #if defined(WIN32)
   #include <cstdint>
@@ -130,7 +135,7 @@ public:
     int32_t y_pixels_per_meter;
     /// bitmap color used
     uint32_t clr_used;
-    /// bitmap color important
+    /// max pixel intensity value
     uint32_t clr_important;
     /// bit depth of the file
     Bit_Depth bit_depth;
@@ -147,79 +152,79 @@ public:
     };
     // copy constructor
     HyperFrame(const HyperFrame & hf){
-      frame_ids = hf.get_frame_ids();
+      frame_ids_ = hf.get_frame_ids();
       for(size_t i=0;i<hf.num_windows();++i){
-        x_begin.push_back(hf.window_x_begin(i));
-        y_begin.push_back(hf.window_y_begin(i));
-        x_count.push_back(hf.window_width(i));
-        y_count.push_back(hf.window_height(i));
+        x_begin_.push_back(hf.window_x_begin(i));
+        y_begin_.push_back(hf.window_y_begin(i));
+        x_count_.push_back(hf.window_width(i));
+        y_count_.push_back(hf.window_height(i));
       }
     }
     // reset the hyperframe parameters
     void clear(){
-      frame_ids.clear();
-      x_begin.clear();
-      y_begin.clear();
-      x_count.clear();
-      y_count.clear();
+      frame_ids_.clear();
+      x_begin_.clear();
+      y_begin_.clear();
+      x_count_.clear();
+      y_count_.clear();
     }
     // add a range of frames to the hyperframe
     void add_frames(const int frame_begin, const int count=1){
       for(int i=frame_begin;i<frame_begin+count;++i)
-        frame_ids.insert(i);
+        frame_ids_.insert(i);
     }
     // return a deep copy of the frame id set
     std::set<int> get_frame_ids()const{
-      return frame_ids;
+      return frame_ids_;
     }
     // return a pointer to the frame ids
-    std::set<int> const * frame_ids_view()const{
-      return & frame_ids;
+    std::set<int> const * frame_ids()const{
+      return & frame_ids_;
     }
     // return the number of frames
     size_t num_frames()const{
-      return frame_ids.size();
+      return frame_ids_.size();
     }
     // add a region of interest to the hyperframe
     void add_window(const size_t x_b, const size_t x_c, const size_t y_b, const size_t y_c){
-      x_begin.push_back(x_b);
-      y_begin.push_back(y_b);
-      x_count.push_back(x_c);
-      y_count.push_back(y_c);
+      x_begin_.push_back(x_b);
+      y_begin_.push_back(y_b);
+      x_count_.push_back(x_c);
+      y_count_.push_back(y_c);
     }
     // returns the number of regions of interst
-    size_t num_windows()const{return x_begin.size();}
+    size_t num_windows()const{return x_begin_.size();}
     // return the total number of pixels per frame (including all windows in the frame)
     size_t num_pixels_per_frame()const{
       size_t num_pixels_pf = 0;
       for(size_t i=0;i<num_windows();++i)
-        num_pixels_pf += x_count[i]*y_count[i];
+        num_pixels_pf += x_count_[i]*y_count_[i];
       return num_pixels_pf;
     }
     // return the number of pixels in the selected window
     size_t num_pixels_per_window(const size_t window_id)const{
       if(window_id>=num_windows()) return 0;
-      return x_count[window_id]*y_count[window_id];
+      return x_count_[window_id]*y_count_[window_id];
     }
     // return the width of the selected window
     size_t window_width(const size_t window_id)const{
       if(window_id>=num_windows()) return 0;
-      return x_count[window_id];
+      return x_count_[window_id];
     }
     // return the height of the selected window
     size_t window_height(const size_t window_id)const{
       if(window_id>=num_windows()) return 0;
-      return y_count[window_id];
+      return y_count_[window_id];
     }
     // return the x begin for the selected window
     size_t window_x_begin(const size_t window_id)const{
       if(window_id>=num_windows()) return 0;
-      return x_begin[window_id];
+      return x_begin_[window_id];
     }
     // return the x begin for the selected window
     size_t window_y_begin(const size_t window_id)const{
       if(window_id>=num_windows()) return 0;
-      return y_begin[window_id];
+      return y_begin_[window_id];
     }
     // returns the size of a buffer large enough to store an entire row of pixel values for the widest window
     size_t buffer_row_size()const{
@@ -231,15 +236,15 @@ public:
     }
   private:
     // storage of frame ids
-    std::set<int> frame_ids;
+    std::set<int> frame_ids_;
     // vector x coordinates of upper left corners for the frame windows or regions of interest
-    std::vector<size_t> x_begin;
+    std::vector<size_t> x_begin_;
     // vector of widths of the frame windows or regions of interest
-    std::vector<size_t> x_count;
+    std::vector<size_t> x_count_;
     // vector of y coordinats of upper left corners for the frame windows or regions of interest
-    std::vector<size_t> y_begin;
+    std::vector<size_t> y_begin_;
     // vector of heights of the frame windows or regions of interest
-    std::vector<size_t> y_count;
+    std::vector<size_t> y_count_;
   };
 
   /// constructor
@@ -264,8 +269,14 @@ public:
   /// return the filename
   std::string file_name()const{return file_name_;}
 
-  /// return the bit depth
+  /// return the bit depth (this is an enum)
   Bit_Depth bit_depth() const{return bitmap_header_.bit_depth;}
+
+  /// return the bit count (either 8 or 16, BIT_DEPTH_8=8, BIT_DEPTH_!0_PACKED=8, BIT_DEPTH_16=16)
+  int bit_count() const{return bitmap_header_.bit_count;}
+
+  /// return the range of intensity values for this cine file (not the max value but the max possible value)
+  int max_possible_intensity()const {return bitmap_header_.clr_important - 1;}
 
   /// return the image width, or the width of a window if specified
   int width(const int window_id=-1)const{
@@ -289,21 +300,31 @@ public:
     return header_.image_count;
   }
 
-  /// return a pointer to the raw data
-  std::vector<char> * data(){return & data_;}
-
   /// returns true if the frame and window id are valid
   bool valid_frame_window(const int frame, const size_t window_id);
 
   /// return a pointer to the raw data for a given frame, and window
-  char * data(const int frame, const size_t window_id=0);
+  uint8_t * data_8(const int frame, const size_t window_id=0);
+
+  /// return a pointer to the raw data for a given frame, and window
+  uint16_t * data_16(const int frame, const size_t window_id=0);
+
+  // write a 16bit frame to cine file
+  static void write_frame(const char * file_name, const size_t width,
+    const size_t height, uint16_t * data, const bool overwrite=false);
+
+  // write an 8bit frame to cine file
+  static void write_frame(const char * file_name, const size_t width,
+    const size_t height, uint8_t * data, const bool overwrite=false);
+
+  // write a cine file header
+  static void write_header(const char * file_name, const size_t width,
+    const size_t height, uint16_t bit_count=8);
 
   // char* data = (char*)cv::Mat.data;
   // write a frame to cine file
-  static void write_frame(const char * file_name, const size_t width, const size_t height, char * data, const bool overwrite=false);
-
-  // write a cine file header
-  static void write_header(const char * file_name, const size_t width, const size_t height);
+  static void write_frame(const char * file_name, const size_t width, const size_t height,
+    uint8_t * data, uint16_t bit_count, const bool overwrite);
 
   /// send hc to ostreams like cout
   friend HYPERCINE_LIB_DLL_EXPORT std::ostream& operator<<(std::ostream& os, const HyperCine & hc);
@@ -318,6 +339,9 @@ private:
   /// method to read a hyperframe into the buffer for an 8bit cine file
   void read_hyperframe_8_bit();
 
+  /// method to read a hyperframe into the buffer for an 8bit cine file
+  void read_hyperframe_16_bit();
+
   /// struct to hold information such as the indexing into each frame of the video
   CineFileHeader header_;
   /// struct to hold information about each frame itself
@@ -327,7 +351,7 @@ private:
   /// the name of the cine file
   std::string file_name_;
   /// buffer for storing date read from cine file in contiguous block (all frames, all windows together)
-  std::vector<char> data_;
+  std::vector<uint8_t> data_;
   /// storage for the index of the first pixel of a frame window for each frame, one vector of indices per frame
   /// (access is [frame][window] to get the index of the first pixel's value in the data_ storage)
   std::map<int,std::vector<size_t> > data_indices_;

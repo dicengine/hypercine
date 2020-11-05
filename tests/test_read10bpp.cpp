@@ -11,11 +11,23 @@ int main(int argc, char *argv[]) {
   int error_count = 0;
   try {
     HyperCine hc("./images/packed_12bpp.cine");
+    // test the bit count of this cine file
+    ASSERT_EXPR(hc.bit_count()==8,error_count);
     HyperCine::HyperFrame hf(60,6); // 60, 61, 62, 63, 64, 65
     // don't add any regions of interest so the whole image is read on the first iteration
     hc.read_buffer(hf);
     std::cout << hc << std::endl;
-    cv::Mat img(hc.height(),hc.width(),CV_8UC1,hc.data(60,0));
+
+    // try reading with the wrong bit-depth to make sure it fails
+    try{
+      cv::Mat should_fail(hc.height(),hc.width(),CV_8UC1,hc.data_16(60,0));
+      std::cout << "should not have made it this far, should have failed on data access as 16 bit from 8 bit cine" << std::endl;
+      error_count++;
+    }catch(std::exception& e) {
+      // do nothing, exception should have been thrown
+    }
+
+    cv::Mat img(hc.height(),hc.width(),CV_8UC1,hc.data_8(60,0));
     // cv::imwrite("packed_12bpp_frame_60.tiff",img);
     // read the gold file
     cv::Mat gold_img = cv::imread("./images/packed_12bpp_frame_60.tiff",cv::IMREAD_GRAYSCALE);
@@ -51,8 +63,8 @@ int main(int argc, char *argv[]) {
       std::cout << "invalid frame or window should have been caught" << std::endl;
       error_count ++;
     }
-    cv::Mat img_roi_0(hc.height(0),hc.width(0),CV_8UC1,hc.data(65,0));
-    cv::Mat img_roi_1(hc.height(1),hc.width(1),CV_8UC1,hc.data(60,1));
+    cv::Mat img_roi_0(hc.height(0),hc.width(0),CV_8UC1,hc.data_8(65,0));
+    cv::Mat img_roi_1(hc.height(1),hc.width(1),CV_8UC1,hc.data_8(60,1));
     // cv::imwrite("packed_12bpp_frame_65_roi.tiff",img_roi);
     // read the gold files and compare
     cv::Mat gold_img_roi_0 = cv::imread("./images/packed_12bpp_frame_65_roi_0.tiff",cv::IMREAD_GRAYSCALE);

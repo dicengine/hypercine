@@ -29,8 +29,8 @@ int main(int argc, char *argv[]) {
   ASSERT_EXPR(hf.window_width(1)==11,error_count);
   ASSERT_EXPR(hf.window_height(1)==111,error_count);
   ASSERT_EXPR(hf.buffer_row_size()==150,error_count);
-  ASSERT_EXPR(*(hf.frame_ids_view()->begin())==1000,error_count);
-  ASSERT_EXPR(*(hf.frame_ids_view()->rbegin())==1024,error_count);
+  ASSERT_EXPR(*(hf.frame_ids()->begin())==1000,error_count);
+  ASSERT_EXPR(*(hf.frame_ids()->rbegin())==1024,error_count);
   if (error_count != 0)
     std::cout << "TEST FAILED\n";
   else
