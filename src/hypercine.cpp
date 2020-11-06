@@ -146,8 +146,8 @@ HyperCine::read_header(const char * file_name){
   cine_file.read(reinterpret_cast<char*>(&header_.image_count), sizeof(header_.image_count));
   DEBUG_MSG("HyperCine::read_header(): header image count:   " << header_.image_count);
   cine_file.read(reinterpret_cast<char*>(&header_.off_image_header), sizeof(header_.off_image_header));
-  assert((int)header_.off_image_header==test_size);
   DEBUG_MSG("HyperCine::read_header(): offset image header:  " << header_.off_image_header);
+  assert((int)header_.off_image_header==test_size);
   cine_file.read(reinterpret_cast<char*>(&header_.off_setup), sizeof(header_.off_setup));
   DEBUG_MSG("HyperCine::read_header(): offset setup:         " << header_.off_setup);
   cine_file.read(reinterpret_cast<char*>(&header_.off_image_offsets), sizeof(header_.off_image_offsets));
@@ -535,7 +535,7 @@ HyperCine::write_frame(const char * file_name,
 //  int image_width_offset = 36 + sizeof(TIME64) + 4;
   if(overwrite||existing_cine_file.fail()){
     existing_cine_file.close(); // close the file so write_header can overwrite it if it exists
-    DEBUG_MSG("HyperCine::write_frame(): writing cine header");
+    DEBUG_MSG("HyperCine::write_frame(): writing cine header: " << file_name);
     write_header(file_name,width,height,bit_count);
   }else{
     // open file as input stream and seekg to the right place to get the image count
@@ -556,7 +556,7 @@ HyperCine::write_frame(const char * file_name,
     }
   }
   // TODO check bit depth stays the same too
-  DEBUG_MSG("HyperCine::write_frame(): writing frame " << image_count);
+  DEBUG_MSG("HyperCine::write_frame(): " << file_name << " frame " << image_count);
   // update the image count
   if (image_count>=MAX_WRITE_FRAMES){
     std::cerr << "Error, max number of frames in this file exceeded. Max " << image_count << ", " << file_name << std::endl;
@@ -597,6 +597,7 @@ HyperCine::write_header(const char * file_name, const size_t width, const size_t
     throw std::exception();
   }
   uint16_t header_size = 36 + sizeof(TIME64);
+  uint32_t off_bitmap_header = 36 + sizeof(TIME64);
   uint32_t bitmap_header_size = 40;
   uint16_t header_version = 1;
   uint16_t dummy16 = 0;
@@ -617,7 +618,7 @@ HyperCine::write_header(const char * file_name, const size_t width, const size_t
   // first_movie_image, total_image_count, first_image_no, and image_count
   for(size_t i=0;i<4;++i)
     cine_file.write(reinterpret_cast<char*>(&dummy), sizeof(uint32_t));
-  cine_file.write(reinterpret_cast<char*>(&header_size), sizeof(uint32_t));
+  cine_file.write(reinterpret_cast<char*>(&off_bitmap_header), sizeof(uint32_t));
   cine_file.write(reinterpret_cast<char*>(&dummy), sizeof(uint32_t)); // off_setup
   cine_file.write(reinterpret_cast<char*>(&off_image_offsets), sizeof(uint32_t));
   cine_file.write(reinterpret_cast<char*>(&dummy_time), sizeof(TIME64));
