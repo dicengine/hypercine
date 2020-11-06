@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
       img_text << "image_" << i << ".png";
       cv::putText(img,img_text.str(),cv::Point(10, img.rows / 2),cv::FONT_HERSHEY_DUPLEX,1.0,cv::Scalar(0),2);
       gold_imgs.push_back(img);
-      // cv::imwrite(img_text.str(),img);
+//      cv::imwrite(img_text.str(),img);
       HyperCine::write_frame(file_name.c_str(),img.cols,img.rows,(uint8_t*)img.data);
     }
     // test file size
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     std::cout << hc << std::endl;
 
     // test images compared to gold images
-    for(size_t i=0;i<gold_imgs.size();++i){
+    for(int i=0;i<(int)gold_imgs.size();++i){
       cv::Mat re_read_image(hc.height(0),hc.width(0),CV_8UC1,hc.data_8(i,0));
       cv::Mat img_diff;
       double min_diff, max_diff;

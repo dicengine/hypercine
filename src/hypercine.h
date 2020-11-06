@@ -309,22 +309,14 @@ public:
   /// return a pointer to the raw data for a given frame, and window
   uint16_t * data_16(const int frame, const size_t window_id=0);
 
-  // write a 16bit frame to cine file
-  static void write_frame(const char * file_name, const size_t width,
-    const size_t height, uint16_t * data, const bool overwrite=false);
-
-  // write an 8bit frame to cine file
+  // char* data = (char*)cv::Mat.data;
+  // write an 8bit frame to cine file (writing currently only implemented for 8 bit)
   static void write_frame(const char * file_name, const size_t width,
     const size_t height, uint8_t * data, const bool overwrite=false);
 
   // write a cine file header
   static void write_header(const char * file_name, const size_t width,
     const size_t height, uint16_t bit_count=8);
-
-  // char* data = (char*)cv::Mat.data;
-  // write a frame to cine file
-  static void write_frame(const char * file_name, const size_t width, const size_t height,
-    uint8_t * data, uint16_t bit_count, const bool overwrite);
 
   /// send hc to ostreams like cout
   friend HYPERCINE_LIB_DLL_EXPORT std::ostream& operator<<(std::ostream& os, const HyperCine & hc);
