@@ -205,8 +205,16 @@ HyperCine::read_header(const char * file_name){
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.clr_important), sizeof(bitmap_header_.clr_important));
   DEBUG_MSG("HyperCine::read_header(): important colors:        " << bitmap_header_.clr_important);
 
-  if(bit_depth==8) bitmap_header_.bit_depth=BIT_DEPTH_8;
-  else if (bit_depth==16) bitmap_header_.bit_depth=BIT_DEPTH_16;
+  if(bit_depth==8){
+    bitmap_header_.bit_depth=BIT_DEPTH_8;
+    if(bitmap_header_.clr_important==0)
+      bitmap_header_.clr_important = 256;
+  }
+  else if (bit_depth==16){
+    bitmap_header_.bit_depth=BIT_DEPTH_16;
+    if(bitmap_header_.clr_important==0)
+      bitmap_header_.clr_important = 65536;
+  }
   else if (bit_depth==10){
     // if the bit_depth is 8 or 10_packed, the data is stored in single bytes so the bit_count needs to be changed to 8
     // since the values get compressed into an equivalent 8 bit value using the table at the top of this file
