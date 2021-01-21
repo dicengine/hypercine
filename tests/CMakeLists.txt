@@ -13,7 +13,7 @@ FOREACH ( test_file ${test_cpp_files})
   # get the name of the test from the cpp filename
   GET_FILENAME_COMPONENT ( name ${test_file} NAME_WE)
   add_executable(${name} ${test_file})
-  install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+  #install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
   target_link_libraries(${name} hypercine ${OpenCV_LIBRARIES})
   target_include_directories(${name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../src)
   add_test(NAME ${name}
