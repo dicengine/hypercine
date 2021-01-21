@@ -32,8 +32,11 @@ SET (HYPERCINE_HEADERS
 
 add_library(hypercine ${HYPERCINE_SOURCES} ${HYPERCINE_HEADERS})
 target_compile_definitions(hypercine PRIVATE -D HYPERCINE_LIB_EXPORTS_MODE)
-install(TARGETS hypercine DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-
+IF(WIN32)
+  install(TARGETS hypercine DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+ELSE()
+  install(TARGETS hypercine DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+ENDIF()
 
 IF(DEFINED OpenCV_DIR)
   message(STATUS "Looking for OpenCV in dir: ${OpenCV_DIR}")
