@@ -114,29 +114,11 @@ HyperCine::valid_frame_window(const int frame,
 }
 
 /// return a pointer to the raw data for a given frame and window
-uint8_t *
-HyperCine::data_8(const int frame,
-  const size_t window_id){
-  if (bitmap_header_.bit_count!=8){
-    std::cerr << "Error, attempting to access the data storage as 8 bit values, but the bit depth for this cine is not 8 bit" << std::endl;
-    throw std::exception();
-  }
+uint16_t *
+HyperCine::data(const int frame, const size_t window_id){
   if (!valid_frame_window(frame,window_id))
     throw std::exception();
   return &data_[data_indices_.find(frame)->second[window_id]];
-}
-
-/// return a pointer to the raw data for a given frame and window
-uint16_t *
-HyperCine::data_16(const int frame,
-  const size_t window_id){
-  if (bitmap_header_.bit_count!=16){
-    std::cerr << "Error, attempting to access the data storage as 16 bit values, but the bit depth for this cine is not 16 bit" << std::endl;
-    throw std::exception();
-  }
-  if (!valid_frame_window(frame,window_id))
-    throw std::exception();
-  return reinterpret_cast<uint16_t*>(&data_[data_indices_.find(frame)->second[window_id]]);
 }
 
 void
@@ -321,33 +303,24 @@ HyperCine::read_buffer(HyperFrame & hf){
   // clear the buffer
   data_.clear();
   data_indices_.clear();
+  // data array is sized in two byte (uint16_t) increments regardless of bit-depth
+  // (for 8-bit images, one of those bytes remains empty, but the memory is still contiguous)
+  data_.resize(hf_.num_pixels_per_frame()*hf_.num_frames());
+  DEBUG_MSG("HyperCine::read_buffer(): data storage size " << data_.size());
 
   // setup the storages
   for(std::set<int>::const_iterator set_it = hf_.frame_ids()->begin();set_it!=hf_.frame_ids()->end();++set_it){
     data_indices_.insert(std::pair<int,std::vector<size_t> >(*set_it,std::vector<size_t>(hf_.num_windows(),0)));
   }
   DEBUG_MSG("HyperCine::read_buffer(): total num pixels per frame " << hf_.num_pixels_per_frame());
-  if(bitmap_header_.bit_depth==BIT_DEPTH_8){
-    // need one byte per pixel per frame, data array is sized in one byte (uint8_t) increments
-    data_.resize(hf_.num_pixels_per_frame()*hf_.num_frames());
-    DEBUG_MSG("HyperCine::read_buffer(): data storage size " << data_.size());
+  if(bitmap_header_.bit_depth==BIT_DEPTH_8)
     read_hyperframe_8_bit();
-  }
-  else if (bitmap_header_.bit_depth==BIT_DEPTH_16){
-    // need two bytes per pixel per frame, data array is sized in one byte (uint8_t) increments
-    data_.resize(hf_.num_pixels_per_frame()*hf_.num_frames()*2);
-    DEBUG_MSG("HyperCine::read_buffer(): data storage size " << data_.size());
+  else if (bitmap_header_.bit_depth==BIT_DEPTH_16)
     read_hyperframe_16_bit();
-  }
-  else if (bitmap_header_.bit_depth==BIT_DEPTH_10_PACKED){
-    // need one byte per pixel per frame, data array is sized in one byte (uint8_t) increments
-    data_.resize(hf_.num_pixels_per_frame()*hf_.num_frames());
-    DEBUG_MSG("HyperCine::read_buffer(): data storage size " << data_.size());
+  else if (bitmap_header_.bit_depth==BIT_DEPTH_10_PACKED)
     read_hyperframe_10_bit_packed();
-  }
-  else{
+  else
     throw std::invalid_argument("invalid bit depth");
-  }
 }
 
 void
@@ -426,12 +399,13 @@ HyperCine::read_hyperframe_16_bit(){
   // the buffer needs to be sized as big as the largest row among the windows in the hyperframe
   const int window_row_buffer_size = (hf_.buffer_row_size()+1)*2; // +1 to oversize
   std::vector<char> window_row_buffer(window_row_buffer_size);
-  DEBUG_MSG("HyperCine::read_hyperframe_16bit(): window row buffer storage size " << window_row_buffer.size());
+  DEBUG_MSG("HyperCine::read_hyperframe_16_bit(): window row buffer storage size " << window_row_buffer.size());
   // position to the first frame in this set:
   uint16_t * window_row_buff_ptr = reinterpret_cast<uint16_t*>(&window_row_buffer[0]);
   size_t total_px_read = 0;
   // iterate the frames
   for(std::set<int>::const_iterator set_it = hf_.frame_ids()->begin();set_it!=hf_.frame_ids()->end();++set_it){
+    DEBUG_MSG("HyperCine::read_hyperframe_16_bit(): reading frame " << *set_it);
     const size_t frame = *set_it - header_.first_image_no;
     const int64_t frame_offset = image_offsets_[frame] + header_.header_offset;
     // iterate the regions of interest
@@ -443,7 +417,7 @@ HyperCine::read_hyperframe_16_bit(){
       const size_t window_y_begin = hf_.window_y_begin(window);
       // due to the image being stored upside down
       const size_t bottom_row_offset = (bitmap_header_.height - window_height - window_y_begin)*bitmap_header_.width*2;
-      data_indices_.find(*set_it)->second[window] = total_px_read*2;
+      data_indices_.find(*set_it)->second[window] = total_px_read;
       // iterate the window rows
       for(size_t row=0;row<window_height;++row){
         const size_t row_inc = row*bitmap_header_.width*2;
@@ -453,8 +427,11 @@ HyperCine::read_hyperframe_16_bit(){
         // unpack the image data from the array
         for(size_t px=0;px<window_width;++px){
           const size_t data_index = (window_height-row-1)*window_width + px;
-          data_[(data_window_start+data_index)*2] = window_row_buff_ptr[px] & 0xff; // split the 16bit value between two bits
-          data_[(data_window_start+data_index)*2+1] = (window_row_buff_ptr[px] >> 8);
+          data_[data_window_start+data_index] = window_row_buff_ptr[px];
+          // below is how the buffer values needed to be split between uint8_t slots when the
+          // memory buffer used to be uint8_t type, now it's uint16_t so the values don't need to be split anymore
+          // data_[(data_window_start+data_index)*2] = window_row_buff_ptr[px] & 0xff; // split the 16bit value between two bits
+          // data_[(data_window_start+data_index)*2+1] = (window_row_buff_ptr[px] >> 8);
           total_px_read++;
         } // end pixel iterator
       } // end window row iterator
@@ -462,7 +439,6 @@ HyperCine::read_hyperframe_16_bit(){
   } // end frame iterator
   cine_file.close();
 }
-
 
 void
 HyperCine::read_hyperframe_10_bit_packed(){
@@ -564,10 +540,10 @@ void
 HyperCine::write_frame(const char * file_name,
   const size_t width,
   const size_t height,
-  uint8_t * data,
+  uint16_t * data,
   const bool overwrite){ // for both 8 bit and 16 bit the frame is written upside down
 
-  uint16_t bit_count = 8;
+  uint16_t bit_count = 16;
 
   // check if file exists
   std::ifstream existing_cine_file(file_name);
@@ -628,15 +604,11 @@ HyperCine::write_frame(const char * file_name,
   cine_file.seekp(0,std::ios::end);
 
   // data needs to be written upside down
-  // FIXME doesn't account for 16bit here
   for(size_t y=0;y<height;++y){
     for(size_t x=0;x<width;++x){
-      cine_file.write(reinterpret_cast<char*>(&data[(height-y-1)*width+x]), sizeof(char));
+      cine_file.write(reinterpret_cast<char*>(&data[(height-y-1)*width+x]), sizeof(uint16_t));
     }
   }
-
-//  for(size_t i=0;i<image_size;++i)
-//    cine_file.write(reinterpret_cast<char*>(&data[i]), sizeof(char));
   cine_file.close();
 }
 

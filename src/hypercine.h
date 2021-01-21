@@ -303,7 +303,7 @@ public:
       if(window_id>=num_windows()) return 0;
       return y_begin_[window_id];
     }
-    // returns the size of a buffer large enough to store an entire row of pixel values for the widest window
+    // returns the number of pixels required to store an entire row for the widest window
     size_t buffer_row_size()const{
       size_t max_num_pixels = 0;
       for(size_t i=0;i<num_windows();++i)
@@ -381,15 +381,12 @@ public:
   bool valid_frame_window(const int frame, const size_t window_id);
 
   /// return a pointer to the raw data for a given frame, and window
-  uint8_t * data_8(const int frame, const size_t window_id=0);
+  uint16_t * data(const int frame, const size_t window_id=0);
 
-  /// return a pointer to the raw data for a given frame, and window
-  uint16_t * data_16(const int frame, const size_t window_id=0);
-
-  // char* data = (char*)cv::Mat.data;
-  // write an 8bit frame to cine file (writing currently only implemented for 8 bit)
+  // write a frame to cine file
+  // NOTE: only implemented for 8-bit array values currently
   static void write_frame(const char * file_name, const size_t width,
-    const size_t height, uint8_t * data, const bool overwrite=false);
+    const size_t height, uint16_t * data, const bool overwrite=false);
 
   // write a cine file header
   static void write_header(const char * file_name, const size_t width,
@@ -420,7 +417,7 @@ private:
   /// the name of the cine file
   std::string file_name_;
   /// buffer for storing date read from cine file in contiguous block (all frames, all windows together)
-  std::vector<uint8_t> data_;
+  std::vector<uint16_t> data_;
   /// storage for the index of the first pixel of a frame window for each frame, one vector of indices per frame
   /// (access is [frame][window] to get the index of the first pixel's value in the data_ storage)
   std::map<int,std::vector<size_t> > data_indices_;

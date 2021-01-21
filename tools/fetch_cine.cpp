@@ -38,15 +38,10 @@ int main(int argc, char *argv[]) {
     HyperCine::HyperFrame hf(frame);
     hc.read_buffer(hf);
     cv::Mat img;
-    if(hc.bit_count()==8)
-      img = cv::Mat(hc.height(),hc.width(),CV_8UC1,hc.data_8(frame));
-    else{
-      img = cv::Mat(hc.height(),hc.width(),CV_16UC1,hc.data_16(frame));
-    }
+    img = cv::Mat(hc.height(),hc.width(),CV_16UC1,hc.data(frame));
     // rescale the intensity range so you can see it in the output image
     img.convertTo(img,CV_8UC1,255.0/hc.max_possible_intensity());
     cv::imwrite(out_file_name.c_str(),img);
-
   }
 }
 
