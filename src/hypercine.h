@@ -39,6 +39,42 @@
 //
 // ************************************************************************
 // @HEADER
+
+// In a nutshell, the hypercine library is used to read cine files in large chunks, which can
+// include several frames and does not necessarily include the entire image for each frame. The
+// main purpose for this is to provide performance improvements by putting large portions of
+// a cine file in local memory without having to go to disk for each frame. Another purpose is
+// that many applications only require a portion of the images stored in a cine file. Having
+// flexibility to read portions of the image can greatly reduce memory requirements for cines with
+// lots of frames.
+//
+// The main object in this library is a HyperCine object. This class stores all the header information
+// from the cine file (for example the offsets to all the individual images, the bit-depth, etc. This
+// class is intended to be instantiated once at the beginning of reading from a cine file to avoid
+// having to re-populate this information every time frame is read.
+//
+// Another class in this library is the HyperFrame class. This class defines the frames and windows
+// within an image that the user would like to read. If no window is defined, the entire image is read
+// for each frame.
+//
+// The actual reading of image data from a cine file is executed by a call to HyerCine.read_buffer(hf),
+// which takes a HyperFrame as an argument to define which parts of the cine file to load into the
+// memory buffer. ***The memory buffer for a HyperCine object is always uint16_t, regardless of the
+// bit-depth.*** This is enable whatever application is using hypercine to pass the pointer around
+// for the image storage without having to cast between types for 8-bit or 16-bit images. For 8-bit
+// cines (or 10-bit packed cines that get converted to 8-bit values), this leads to an empty 8bits for
+// each storage array value.
+//
+// Accessing the intensity value storage is done through a call to HyperCine.data(), which returns a
+// uint16_t pointer to the storage array, which is always contiguous in memory.
+//
+// For the most basic file read operation, the psuedo-code would look something like this:
+// HyperCine hc(image_file_name); - initialize the cine header info for the specified file
+// HyperFrame hf(frame_begin,frame_count); - define the subset of the cine file that the user would like to read
+// HyperCine.read_buffer(hf); - load this portion of the image data into memory
+// uint16_t * data_ptr = HyperCine.data(); - obtain a pointer to the data to use in the application
+
+
 #ifndef HYPERCINE_H
 #define HYPERCINE_H
 #if defined(WIN32)
