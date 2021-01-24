@@ -98,10 +98,12 @@
 #  define HYPERCINE_LIB_DLL_EXPORT
 #endif
 // debugging macros:
+#ifndef DEBUG_MSG
 #ifdef HYPERCINE_DEBUG_MSG
 #  define DEBUG_MSG(x) do { std::cout << "[DEBUG]: " << x << std::endl; } while (0)
 #else
 #  define DEBUG_MSG(x) do {} while (0)
+#endif
 #endif
 // buffer output macros (for interfacing with javascript):
 #define BUFFER_MSG(var,val) do { std::cout << "[--BUFFER_OUT--]: " << var <<  " " << val << std::endl; } while (0)
