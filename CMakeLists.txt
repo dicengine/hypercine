@@ -53,7 +53,10 @@ IF(DEFINED OpenCV_DIR)
     FILE(COPY ${OPENCV_DLLS} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
   ENDIF()
   # only add tests and tools for OpenCV builds
+  # also only add tests and tools if BUILD_TESTS is defined in the do cmake file
+  IF(BUILD_TESTS)
   add_subdirectory(tests)
   add_subdirectory(tools)
   add_subdirectory(performance)
+  ENDIF()
 ENDIF()
