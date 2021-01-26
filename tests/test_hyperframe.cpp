@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
   hf.add_window(45,150,13,201);
   hf.add_window(25,11,78,111);
   ASSERT_EXPR(hf.num_windows()==2,error_count);
+  ASSERT_EXPR(hf.num_frames()==25,error_count);
   ASSERT_EXPR(hf.num_pixels_per_window(5)==0,error_count);
   ASSERT_EXPR(hf.num_pixels_per_window(0)==30150,error_count);
   ASSERT_EXPR(hf.num_pixels_per_window(1)==1221,error_count);
@@ -31,6 +32,22 @@ int main(int argc, char *argv[]) {
   ASSERT_EXPR(hf.buffer_row_size()==150,error_count);
   ASSERT_EXPR(*(hf.frame_ids()->begin())==1000,error_count);
   ASSERT_EXPR(*(hf.frame_ids()->rbegin())==1024,error_count);
+
+  // test resetting the frame ids
+  std::set<int> frames;
+  frames.insert(200);
+  frames.insert(403);
+  frames.insert(21);
+  hf.update_frames(frames);
+  ASSERT_EXPR(hf.num_frames()==frames.size(),error_count);
+  for(std::set<int>::const_iterator set_it=frames.begin();set_it!=frames.end();++set_it){
+    ASSERT_EXPR(hf.has_frame(*set_it),error_count);
+  }
+
+  // test window id method
+  ASSERT_EXPR(hf.window_id(12,11,78,111)==-1,error_count);
+  ASSERT_EXPR(hf.window_id(25,11,78,111)==1,error_count);
+
   if (error_count != 0)
     std::cout << "TEST FAILED\n";
   else

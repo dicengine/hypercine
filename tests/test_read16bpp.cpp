@@ -37,11 +37,11 @@ int main(int argc, char *argv[]) {
     hf.add_window(38,25,20,17);
     hc.read_buffer(hf);
     std::cout << hc << std::endl;
-    if(!hc.valid_frame_window(238297,0)){
+    if(!hc.buffer_has_frame(238297)){
       std::cout << "invalid frame or window" << std::endl;
       error_count ++;
     }
-    if(hc.valid_frame_window(238298,0)){
+    if(hc.buffer_has_frame(238298)){
       std::cout << "invalid frame or window should have been caught" << std::endl;
       error_count ++;
     }

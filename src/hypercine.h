@@ -229,6 +229,10 @@ public:
     HyperFrame(const int frame, const int count=1){
       add_frames(frame,count);
     };
+    // constructor with set of frame ids
+    HyperFrame(const std::set<int> & frame_ids){
+      update_frames(frame_ids);
+    };
     // copy constructor
     HyperFrame(const HyperFrame & hf){
       frame_ids_ = hf.get_frame_ids();
@@ -247,10 +251,30 @@ public:
       x_count_.clear();
       y_count_.clear();
     }
+    int window_id(const size_t x_begin,
+      const size_t x_count,
+      const size_t y_begin,
+      const size_t y_count)const{
+      if(num_frames()==0||num_windows()==0){
+        DEBUG_MSG("HyperFrame::window_id(): no frames or windows in HyperFrame");
+        return -1;
+      }
+      for(int window=0; window<(int)num_windows();++window){
+        if(x_count == x_count_[window] &&
+            y_count == y_count_[window] &&
+            x_begin == x_begin_[window] &&
+            y_begin == y_begin_[window]) return window;
+      }
+      return -1;
+    }
     // add a range of frames to the hyperframe
     void add_frames(const int frame_begin, const int count=1){
       for(int i=frame_begin;i<frame_begin+count;++i)
         frame_ids_.insert(i);
+    }
+    // add a set of frame ids to the hyperframe
+    void update_frames(const std::set<int> & frame_ids){
+      frame_ids_ = frame_ids;
     }
     // return a deep copy of the frame id set
     std::set<int> get_frame_ids()const{
@@ -259,6 +283,10 @@ public:
     // return a pointer to the frame ids
     std::set<int> const * frame_ids()const{
       return & frame_ids_;
+    }
+    // returns true if the frame exists in the HyperFrame
+    bool has_frame(const int frame)const{
+      return frame_ids_.find(frame)!=frame_ids_.end();
     }
     // return the number of frames
     size_t num_frames()const{
@@ -336,6 +364,11 @@ public:
   /// \param hf the HyperFrame that defines what regions of interest to read and for what frame range
   void read_buffer(HyperFrame & hf);
 
+  /// method to read the cine file into the storage buffer
+  /// convenience method for reading the buffer when the member data hf_ has been
+  /// modified
+  void read_buffer();
+
   /// return pointer to the cine file header
   CineFileHeader * header(){return &header_;}
 
@@ -356,6 +389,9 @@ public:
 
   /// return the range of intensity values for this cine file (not the max value but the max possible value)
   int max_possible_intensity()const {return bitmap_header_.clr_important - 1;}
+
+  /// return a copy of the current hyperframe
+  HyperFrame * hyperframe(){return & hf_;}
 
   /// return the image width, or the width of a window if specified
   int width(const int window_id=-1)const{
@@ -379,11 +415,21 @@ public:
     return header_.image_count;
   }
 
-  /// returns true if the frame and window id are valid
-  bool valid_frame_window(const int frame, const size_t window_id);
+  /// returns true if the frame has been loaded into the data buffer
+  bool buffer_has_frame(const int frame) const;
+
+  /// returns true if the window id has been loaded into the data buffer
+  bool buffer_has_window(const size_t window_id) const;
 
   /// return a pointer to the raw data for a given frame, and window
   uint16_t * data(const int frame, const size_t window_id=0);
+
+  /// return a pointer to the raw data for a given frame, and window extents
+  uint16_t * data(const int frame,
+    const size_t x_begin,
+    const size_t x_count,
+    const size_t y_begin,
+    const size_t y_count);
 
   // write a frame to cine file
   // NOTE: only implemented for 8-bit array values currently
@@ -392,7 +438,7 @@ public:
 
   // write a cine file header
   static void write_header(const char * file_name, const size_t width,
-    const size_t height, uint16_t bit_count=8);
+    const size_t height, uint16_t bit_count=16);
 
   /// send hc to ostreams like cout
   friend HYPERCINE_LIB_DLL_EXPORT std::ostream& operator<<(std::ostream& os, const HyperCine & hc);

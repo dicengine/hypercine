@@ -92,22 +92,21 @@ HyperCine::HyperCine(const char * file_name):
   read_header(file_name);
 }
 
-/// check for valid frame and window id:
+/// check for valid frame (it's loaded into the buffer):
 bool
-HyperCine::valid_frame_window(const int frame,
-  const size_t window_id){
-  if(data_indices_.size()==0){
-    std::cout << "error: data is not initialized yet" << std::endl;
+HyperCine::buffer_has_frame(const int frame) const{
+  if(!hf_.has_frame(frame)){
+    DEBUG_MSG("HyperCine::buffer_has_frame(): frame " << frame << " not found in buffer frames");
     return false;
   }
-  if(hf_.frame_ids()->find(frame)==hf_.frame_ids()->end()){
-    std::cout << "error: invalid frame number: " << frame  << " not found in buffer frames" << std::endl;
-    std::cout << " first frame in file " << header_.first_image_no <<
-        " last frame " << header_.first_image_no + header_.image_count << std::endl;
-    return false;
-  }
+  return true;
+}
+
+/// check for valid window id (it's loaded into the buffer):
+bool
+HyperCine::buffer_has_window(const size_t window_id) const{
   if(window_id<0||window_id>=hf_.num_windows()){
-    std::cout << "error: invalid window id: " << window_id << std::endl;
+    DEBUG_MSG("HyperCine::buffer_has_window(): window id not found: " << window_id);
     return false;
   }
   return true;
@@ -116,8 +115,74 @@ HyperCine::valid_frame_window(const int frame,
 /// return a pointer to the raw data for a given frame and window
 uint16_t *
 HyperCine::data(const int frame, const size_t window_id){
-  if (!valid_frame_window(frame,window_id))
-    throw std::exception();
+  // first check if no data has been read into the buffer
+  if(data_indices_.size()==0){
+    // if this is the case, the window_id must be 0
+    if (window_id!=0){
+      std::cout << "error: HyperCine::data(), cannot specify non-zero window_id for uninitialized buffer" << std::endl;
+      throw std::exception();
+    }
+    DEBUG_MSG("HyperCine::data(frame,window_id): reading buffer since it is uninitialized");
+    HyperFrame hf(frame);
+    read_buffer(hf);
+  }else{ // data exists in the buffer
+    // check if the window_id requested exists
+    if(!buffer_has_window(window_id)){
+      std::cout << "error: HyperCine::data(), invalid window id" << std::endl;
+      throw std::exception();
+    }
+    // the frame requested does not exist
+    if(!buffer_has_frame(frame)){
+      DEBUG_MSG("HyperCine::data(frame,window_id): buffer is initialized, "
+        "but reading buffer again since the requested frame has not been read");
+      std::set<int> frames;
+      frames.insert(frame);
+      hf_.update_frames(frames);
+      read_buffer();
+    }
+  }
+  return &data_[data_indices_.find(frame)->second[window_id]];
+}
+
+/// return a pointer to the raw data for a given frame and window
+uint16_t *
+HyperCine::data(const int frame,
+  const size_t x_begin,
+  const size_t x_count,
+  const size_t y_begin,
+  const size_t y_count){
+  int window_id = 0;
+  // first check if no data has been read into the buffer
+  if(data_indices_.size()==0){
+    DEBUG_MSG("HyperCine::data(frame,x_begin...): reading buffer since it is uninitialized");
+    HyperFrame hf(frame);
+    hf.add_window(x_begin,x_count,y_begin,y_count);
+    read_buffer(hf);
+  }else{ // data exists in the buffer
+    // check to see if the window is not in the buffer (id == -1)
+    // if the window is not in the buffer, it triggers a read_buffer
+    // regardless of if the frame is in the buffer
+    window_id = hf_.window_id(x_begin,x_count,y_begin,y_count);
+    if(window_id<0){
+      DEBUG_MSG("HyperCine::data(frame,x_begin...): buffer is initialized, but reading buffer"
+        " again since the requested window is not in the buffer");
+      HyperFrame hf(frame);
+      hf.add_window(x_begin,x_count,y_begin,y_count);
+      read_buffer(hf);
+      window_id = 0;
+    }else{ // the window extents are in the buffer, but this particular frame
+      // might not be, if the frame does not exist, reset the frame_ids on the hf_
+      // and call read_buffer again
+      if(!buffer_has_frame(frame)){
+        DEBUG_MSG("HyperCine::data(frame,x_begin...): buffer is initialized, but reading buffer"
+          " again since the requested frame is not in the buffer");
+        std::set<int> frames;
+        frames.insert(frame);
+        hf_.update_frames(frames);
+        read_buffer();
+      }
+    }
+  }
   return &data_[data_indices_.find(frame)->second[window_id]];
 }
 
@@ -247,7 +312,7 @@ HyperCine::read_header(const char * file_name){
     bitmap_header_.clr_important=256;
     DEBUG_MSG("HyperCine::read_header(): reset important colors to: " << bitmap_header_.clr_important);
   }else{
-    std::cerr << "invalid bit depth " << bit_depth << std::endl;
+    std::cout << "invalid bit depth " << bit_depth << std::endl;
     throw std::invalid_argument("invalid bit depth");
   }
 
@@ -276,18 +341,26 @@ HyperCine::read_header(const char * file_name){
 
 void
 HyperCine::read_buffer(HyperFrame & hf){
-  hf_ = hf; // store a copy of the
+  hf_ = hf; // store a copy of the window dimensions and frame ids
+  read_buffer();
+}
+
+void
+HyperCine::read_buffer(){
+  DEBUG_MSG("HyperCine::read_buffer(): called");
   // check that the bounds on the hyperframe are valid
-  if(hf_.num_frames()<=0)
+  if(hf_.num_frames()<=0){
+    std::cout << "no frames specified in read_buffer() call" << std::endl;
     throw std::invalid_argument("invalid HyperFrame (no frames)");
+  }
   for(std::set<int>::const_iterator set_it = hf_.frame_ids()->begin();set_it!=hf_.frame_ids()->end();++set_it){
     int frame = *set_it;
     int end_frame = header_.first_image_no + header_.image_count - 1;
     int begin_frame = header_.first_image_no;
     if(frame<begin_frame||frame>end_frame){
-      std::cerr << "invalid frame requested: " << *set_it << std::endl;
-      std::cerr << "first frame no: " << begin_frame << std::endl;
-      std::cerr << "last frame no: " << end_frame << std::endl;
+      std::cout << "error: invalid frame requested: " << *set_it << std::endl;
+      std::cout << "first frame no: " << begin_frame << std::endl;
+      std::cout << "last frame no: " << end_frame << std::endl;
       throw std::invalid_argument("invalid HyperFrame (includes invalid frame)");
     }
   }
@@ -295,10 +368,14 @@ HyperCine::read_buffer(HyperFrame & hf){
   if(hf_.num_windows()==0)
     hf_.add_window(0,bitmap_header_.width,0,bitmap_header_.height);
   for(size_t i=0;i<hf_.num_windows();++i){
-    if(hf_.window_x_begin(i) < 0 || hf_.window_x_begin(i) + hf_.window_width(i) > bitmap_header_.width)
-      throw std::invalid_argument("invalid HyperFrame window (window x_begin < 0 or window x_begin + window_width > image width)");
-    if(hf_.window_y_begin(i) < 0 || hf_.window_y_begin(i) + hf_.window_height(i) > bitmap_header_.height)
-      throw std::invalid_argument("invalid HyperFrame window (window y_begin < 0 or window y_begin + window_height > image height)");
+    if(hf_.window_x_begin(i) < 0 || hf_.window_x_begin(i) + hf_.window_width(i) > bitmap_header_.width){
+      std::cout << "error: invalid HyperFrame window (window x_begin < 0 or window x_begin + window_width > image width)" << std::endl;
+      throw std::invalid_argument("");
+    }
+    if(hf_.window_y_begin(i) < 0 || hf_.window_y_begin(i) + hf_.window_height(i) > bitmap_header_.height){
+      std::cout << "error: invalid HyperFrame window (window y_begin < 0 or window y_begin + window_height > image height)" << std::endl;
+      throw std::invalid_argument("");
+    }
   }
   // clear the buffer
   data_.clear();
@@ -336,7 +413,7 @@ HyperCine::read_hyperframe_8_bit(){
   // open the file
   std::ifstream cine_file(file_name_.c_str(), std::ios::in | std::ios::binary);
   if (cine_file.fail()){
-    std::cerr << "Error, can't open the file: " << file_name_ << std::endl;
+    std::cout << "Error, can't open the file: " << file_name_ << std::endl;
     throw std::exception();
   }
 
@@ -392,7 +469,7 @@ HyperCine::read_hyperframe_16_bit(){
   // open the file
   std::ifstream cine_file(file_name_.c_str(), std::ios::in | std::ios::binary);
   if (cine_file.fail()){
-    std::cerr << "Error, can't open the file: " << file_name_ << std::endl;
+    std::cout << "Error, can't open the file: " << file_name_ << std::endl;
     throw std::exception();
   }
 
@@ -451,7 +528,7 @@ HyperCine::read_hyperframe_10_bit_packed(){
   // open the file
   std::ifstream cine_file(file_name_.c_str(), std::ios::in | std::ios::binary);
   if (cine_file.fail()){
-    std::cerr << "Error, can't open the file: " << file_name_ << std::endl;
+    std::cout << "Error, can't open the file: " << file_name_ << std::endl;
     throw std::exception();
   }
   // the buffer needs to be sized as big as the largest row among the windows in the hyperframe
@@ -565,7 +642,7 @@ HyperCine::write_frame(const char * file_name,
     //DEBUG_MSG("HyperCine::write_frame(): existing image dimensions: " << existing_width << " x " << existing_height);
     existing_cine_file.close();
     if (width!=existing_width||height!=existing_height){
-      std::cerr << "Error, invalid image dimensions: width " << width << " existing width " << existing_width <<
+      std::cout << "Error, invalid image dimensions: width " << width << " existing width " << existing_width <<
           " height" << height << " existing height " << existing_height << std::endl;
       throw std::exception();
     }
@@ -574,14 +651,14 @@ HyperCine::write_frame(const char * file_name,
   DEBUG_MSG("HyperCine::write_frame(): " << file_name << " frame " << image_count);
   // update the image count
   if (image_count>=MAX_WRITE_FRAMES){
-    std::cerr << "Error, max number of frames in this file exceeded. Max " << image_count << ", " << file_name << std::endl;
+    std::cout << "Error, max number of frames in this file exceeded. Max " << image_count << ", " << file_name << std::endl;
     throw std::exception();
   }
   image_count++;
 
   std::ofstream cine_file(file_name, std::ios::in | std::ios::out | std::ios::binary);
   if (cine_file.fail()){
-    std::cerr << "Error, can't open the file: " << file_name << std::endl;
+    std::cout << "Error, can't open the file: " << file_name << std::endl;
     throw std::exception();
   }
   // update the image count
@@ -616,7 +693,7 @@ void
 HyperCine::write_header(const char * file_name, const size_t width, const size_t height, uint16_t bit_count){
   std::ofstream cine_file(file_name, std::ios::out | std::ios::binary);
   if (cine_file.fail()){
-    std::cerr << "Error, can't open the file: " << file_name << std::endl;
+    std::cout << "Error, can't open the file: " << file_name << std::endl;
     throw std::exception();
   }
   uint16_t header_size = 36 + sizeof(TIME64);
@@ -629,7 +706,7 @@ HyperCine::write_header(const char * file_name, const size_t width, const size_t
   uint32_t image_width = width;
   uint32_t image_height = height;
   uint32_t image_size = width*height*(bit_count/8);
-  uint32_t clr_important = bit_count == 8 ? 256 : 4096; // FIXME assumes if the image is 16bit the dynamic range is 12bit (0-4095)
+  uint32_t clr_important = bit_count == 8 ? 256 : 65536;
   TIME64 dummy_time;
   uint64_t dummy_offset = 0;
 

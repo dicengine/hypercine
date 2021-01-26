@@ -32,8 +32,8 @@ int main(int argc, char *argv[]) {
     hf.add_window(70,100,30,60);
     hc.read_buffer(hf);
     std::cout << hc << std::endl;
-    if(!hc.valid_frame_window(10,0)){
-      std::cout << "invalid frame or window" << std::endl;
+    if(!hc.buffer_has_frame(10)){
+      std::cout << "invalid frame" << std::endl;
       error_count ++;
     }
     cv::Mat img_roi_0(hc.height(0),hc.width(0),CV_16UC1,hc.data(10,0));

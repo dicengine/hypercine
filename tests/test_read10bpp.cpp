@@ -43,16 +43,20 @@ int main(int argc, char *argv[]) {
     hf.add_window(169,38,17,20);
     hc.read_buffer(hf);
     std::cout << hc << std::endl;
-    if(!hc.valid_frame_window(65,0)){
+    if(!hc.buffer_has_frame(65)){
       std::cout << "invalid frame or window" << std::endl;
       error_count ++;
     }
-    if(!hc.valid_frame_window(60,1)){
-      std::cout << "invalid frame or window" << std::endl;
+    if(!hc.buffer_has_frame(60)){
+      std::cout << "invalid frame" << std::endl;
       error_count ++;
     }
-    if(hc.valid_frame_window(42,0)){
-      std::cout << "invalid frame or window should have been caught" << std::endl;
+    if(!hc.buffer_has_window(1)){
+      std::cout << "invalid window" << std::endl;
+      error_count ++;
+    }
+    if(hc.buffer_has_frame(42)){
+      std::cout << "invalid frame should have been caught" << std::endl;
       error_count ++;
     }
     cv::Mat img_roi_0(hc.height(0),hc.width(0),CV_16UC1,hc.data(65,0));
