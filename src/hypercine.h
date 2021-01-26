@@ -272,6 +272,11 @@ public:
       for(int i=frame_begin;i<frame_begin+count;++i)
         frame_ids_.insert(i);
     }
+    // update a range of frames to the hyperframe
+    void update_frames(const int frame_begin, const int count=1){
+      frame_ids_.clear();
+      add_frames(frame_begin,count);
+    }
     // add a set of frame ids to the hyperframe
     void update_frames(const std::set<int> & frame_ids){
       frame_ids_ = frame_ids;
