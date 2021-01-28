@@ -400,6 +400,60 @@ HyperCine::read_buffer(){
     throw std::invalid_argument("invalid bit depth");
 }
 
+std::vector<uint16_t>
+HyperCine::get_frame(const int frame){
+  std::vector<uint16_t> data;
+  DEBUG_MSG("HyperCine::get_frame(): frame " << frame);
+  if(bitmap_header_.bit_depth==BIT_DEPTH_8)
+    read_hyperframe_8_bit_full(frame,data);
+  else if (bitmap_header_.bit_depth==BIT_DEPTH_16)
+    read_hyperframe_16_bit_full(frame,data);
+  else if (bitmap_header_.bit_depth==BIT_DEPTH_10_PACKED)
+    read_hyperframe_10_bit_packed_full(frame,data);
+  else
+    throw std::invalid_argument("invalid bit depth");
+  return data;
+}
+
+void
+HyperCine::read_hyperframe_8_bit_full(const int frame, std::vector<uint16_t> & data){
+  //
+  // NOTE: in 8bit format the images are stored upside down!
+  //
+  DEBUG_MSG("HyperCine::read_hyperframe_8_bit_full():");
+  data.clear();
+  data.resize(bitmap_header_.width*bitmap_header_.height);
+  // open the file
+  std::ifstream cine_file(file_name_.c_str(), std::ios::in | std::ios::binary);
+  if (cine_file.fail()){
+    std::cout << "Error, can't open the file: " << file_name_ << std::endl;
+    throw std::exception();
+  }
+  std::vector<char> window_row_buffer(bitmap_header_.width);
+  DEBUG_MSG("HyperCine::read_hyperframe_8_bit_full(): window row buffer storage size " << window_row_buffer.size());
+  // position to the first frame in this set:
+  uint8_t * window_row_buff_ptr = reinterpret_cast<uint8_t*>(&window_row_buffer[0]);
+  size_t total_px_read = 0;
+  // iterate the frames
+  const int64_t frame_offset = image_offsets_[frame - header_.first_image_no] + header_.header_offset;
+  // iterate the regions of interest
+  const size_t data_window_start = total_px_read;
+  for(size_t row=0;row<bitmap_header_.height;++row){
+    const size_t row_inc = row*bitmap_header_.width;
+    const int64_t begin_window_row = frame_offset + row_inc;
+    cine_file.seekg(begin_window_row);
+    cine_file.read(&window_row_buffer[0],window_row_buffer.size());
+    // unpack the image data from the array
+    for(size_t px=0;px<bitmap_header_.width;++px){
+      const size_t data_index = (bitmap_header_.height-row-1)*bitmap_header_.width + px;
+      // due to the image being stored upside down
+      data[data_window_start+data_index] = window_row_buff_ptr[px];
+      total_px_read++;
+    } // end pixel iterator
+  } // end window row iterator
+  cine_file.close();
+}
+
 void
 HyperCine::read_hyperframe_8_bit(){
   //
@@ -455,6 +509,47 @@ HyperCine::read_hyperframe_8_bit(){
   } // end frame iterator
   cine_file.close();
 }
+
+void
+HyperCine::read_hyperframe_16_bit_full(const int frame, std::vector<uint16_t> & data){
+  //
+  // NOTE: in 16bit format the images are stored upside down!
+  //
+  DEBUG_MSG("HyperCine::read_hyperframe_16_bit_full():");
+  data.clear();
+  data.resize(bitmap_header_.width*bitmap_header_.height);
+  // open the file
+  std::ifstream cine_file(file_name_.c_str(), std::ios::in | std::ios::binary);
+  if (cine_file.fail()){
+    std::cout << "Error, can't open the file: " << file_name_ << std::endl;
+    throw std::exception();
+  }
+  // the buffer needs to be sized as big as the largest row among the windows in the hyperframe
+  std::vector<char> window_row_buffer(bitmap_header_.width*bitmap_header_.height*2);
+  DEBUG_MSG("HyperCine::read_hyperframe_16_bit_full(): window row buffer storage size " << window_row_buffer.size());
+  // position to the first frame in this set:
+  uint16_t * window_row_buff_ptr = reinterpret_cast<uint16_t*>(&window_row_buffer[0]);
+  size_t total_px_read = 0;
+  DEBUG_MSG("HyperCine::read_hyperframe_16_bit_full(): reading frame " << frame);
+  const int64_t frame_offset = image_offsets_[frame-header_.first_image_no] + header_.header_offset;
+  // iterate the regions of interest
+  const size_t data_window_start = total_px_read;
+  // iterate the window rows
+  for(size_t row=0;row<bitmap_header_.height;++row){
+    const size_t row_inc = row*bitmap_header_.width*2;
+    const int64_t begin_window_row = frame_offset + row_inc;
+    cine_file.seekg(begin_window_row);
+    cine_file.read(&window_row_buffer[0],window_row_buffer.size());
+    // unpack the image data from the array
+    for(size_t px=0;px<bitmap_header_.width;++px){
+      const size_t data_index = (bitmap_header_.height-row-1)*bitmap_header_.width + px;
+      data[data_window_start+data_index] = window_row_buff_ptr[px];
+      total_px_read++;
+    } // end pixel iterator
+  } // end window row iterator
+  cine_file.close();
+}
+
 
 void
 HyperCine::read_hyperframe_16_bit(){
@@ -514,6 +609,64 @@ HyperCine::read_hyperframe_16_bit(){
       } // end window row iterator
     } // end window iterator
   } // end frame iterator
+  cine_file.close();
+}
+
+void
+HyperCine::read_hyperframe_10_bit_packed_full(const int frame, std::vector<uint16_t> & data){
+  DEBUG_MSG("HyperCine::read_hyperframe_10_bit_packed_full():");
+  data.clear();
+  data.resize(bitmap_header_.width*bitmap_header_.height);
+  // open the file
+  std::ifstream cine_file(file_name_.c_str(), std::ios::in | std::ios::binary);
+  if (cine_file.fail()){
+    std::cout << "Error, can't open the file: " << file_name_ << std::endl;
+    throw std::exception();
+  }
+  // the buffer needs to be sized as big as the largest row among the windows in the hyperframe
+  const int window_row_buffer_size = ceil(((bitmap_header_.width+1)*10)/8); // 10 bits per pixel divided by 8 to get bytes, +1 to oversize
+  std::vector<char> window_row_buffer(window_row_buffer_size);
+  DEBUG_MSG("HyperCine::read_buffer_full(): window row buffer storage size " << window_row_buffer.size());
+  // position to the first frame in this set:
+  uint8_t * window_row_buff_ptr = reinterpret_cast<uint8_t*>(&window_row_buffer[0]);
+  uint16_t intensity_16 = 0.0;
+  uint16_t intensity_16p1 = 0.0;
+  uint16_t two_byte = 0;
+  size_t total_px_read = 0;
+  const int64_t frame_offset = image_offsets_[frame - header_.first_image_no] + header_.header_offset;
+  // iterate the window rows
+  for(size_t row=0;row<bitmap_header_.height;++row){
+    const size_t row_inc = row*bitmap_header_.width;
+    // determine the position of the first pixel in the this row of this window
+    const int64_t begin_window_row = frame_offset + (row_inc*10)/8; // convert the number of pixels up to this point to number of bytes to hold 10bit pixel values
+    cine_file.seekg(begin_window_row);
+    cine_file.read(&window_row_buffer[0],window_row_buffer_size);
+    // unpack the 10 bit image data from the array
+    for(size_t px=0;px<bitmap_header_.width;++px){
+      // and now to index into the strange beast that is 10bit packed cine files...
+      // this looks strange because the ten bits are shared across bytes, the first byte has 1 10bit number, with 2 bits spilling into the
+      // next byte. The second byte has 2 leftover bits from the first 10bit number, 6 bits from the current 10bit value and spills 4 into the next byte
+      // the third byte has 4 bits from the third 10bit value, 4 bits of its own 10bit value and spills 6 bits into the next byte
+      // the fourth byte has 6 bits from the last 10bit value, 2 bits of its own, and spills 8 into the next byte, filling that byte
+      // so in total it takes 5 bytes for every 4 10bit values
+      const size_t col_inc = px;
+      const size_t slot = px*10/8;
+      const size_t chunk_offset = col_inc%4; // 5 bytes per four pixels
+      // create the single 16 bit combo
+      intensity_16p1 = window_row_buff_ptr[slot+1];
+      intensity_16p1 <<= 8; // move the bits over to the beginning of the byte
+      intensity_16 = window_row_buff_ptr[slot];
+      two_byte = intensity_16 | intensity_16p1;
+      endian_swap(two_byte);
+      // shift the 10 bits to the right side of the 16 bit data type;
+      two_byte = two_byte >> (6 - (chunk_offset*2));
+      // use a mask to zero out the left 6 bits
+      two_byte = two_byte & 0x3FF; // 16 bits with only the right 10 active;
+      // this next step is required because the original signal was companded from 12 bits to 10,
+      // now we are compressing it back to 8 bit:
+      data[total_px_read++] = Lin8UT[two_byte];
+    } // end pixel iterator
+  } // end window row iterator
   cine_file.close();
 }
 

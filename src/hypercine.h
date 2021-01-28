@@ -453,6 +453,11 @@ public:
     const size_t y_begin,
     const size_t y_count);
 
+  /// convenience method to read a full frame, return it as a copied vector
+  /// of intensity values and not interfere with the memory buffer data_ if
+  /// it has already been populated with data
+  std::vector<uint16_t> get_frame(const int frame);
+
   // write a frame to cine file
   // NOTE: only implemented for 8-bit array values currently
   static void write_frame(const char * file_name, const size_t width,
@@ -472,11 +477,35 @@ private:
   /// method to read a hyperframe into the buffer for a 10bit packed cine file
   void read_hyperframe_10_bit_packed();
 
+  /// method to read a full frame into a vector
+  /// This method doesn't rely on the information in the hf_ HyperFrame stored in this class.
+  /// It also doesn't interfere with the memory buffer data_ of the class instance
+  /// so it can be called without clearing the stored memory buffer
+  /// It's used to get a copy of a single frame while the buffer may already be populated with
+  /// data from what's defined in hf_
+  void read_hyperframe_10_bit_packed_full(const int frame, std::vector<uint16_t> & data);
+
   /// method to read a hyperframe into the buffer for an 8bit cine file
   void read_hyperframe_8_bit();
 
+  /// method to read a full frame into a vector
+  /// This method doesn't rely on the information in the hf_ HyperFrame stored in this class.
+  /// It also doesn't interfere with the memory buffer data_ of the class instance
+  /// so it can be called without clearing the stored memory buffer
+  /// It's used to get a copy of a single frame while the buffer may already be populated with
+  /// data from what's defined in hf_
+  void read_hyperframe_8_bit_full(const int frame, std::vector<uint16_t> & data);
+
   /// method to read a hyperframe into the buffer for an 8bit cine file
   void read_hyperframe_16_bit();
+
+  /// method to read a full frame into a vector
+  /// This method doesn't rely on the information in the hf_ HyperFrame stored in this class.
+  /// It also doesn't interfere with the memory buffer data_ of the class instance
+  /// so it can be called without clearing the stored memory buffer
+  /// It's used to get a copy of a single frame while the buffer may already be populated with
+  /// data from what's defined in hf_
+  void read_hyperframe_16_bit_full(const int frame, std::vector<uint16_t> & data);
 
   /// struct to hold information such as the indexing into each frame of the video
   CineFileHeader header_;
