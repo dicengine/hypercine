@@ -367,11 +367,16 @@ public:
 
   /// method to read the cine file into the storage buffer
   /// \param hf the HyperFrame that defines what regions of interest to read and for what frame range
+  /// This method is used to manually populate the memory buffer in large chunks for
+  /// a cine file. Alternatively, the user can simply call data(frame, window_id) or data(frame, window_dims)
+  /// which will automatically call read_buffer to populate the reqeusted frame information.
   void read_buffer(HyperFrame & hf);
 
   /// method to read the cine file into the storage buffer
   /// convenience method for reading the buffer when the member data hf_ has been
   /// modified
+  /// See note above about when to manually call read_buffer() rather than have it implicitly called
+  /// when data(frame,window_id) or data(frame,window_dims) is called.
   void read_buffer();
 
   /// return pointer to the cine file header
@@ -427,9 +432,21 @@ public:
   bool buffer_has_window(const size_t window_id) const;
 
   /// return a pointer to the raw data for a given frame, and window
+  /// if the frame is valid, but out of range of what is loaded in the buffer
+  /// this call will automatically load the requested frame into the buffer
+  /// after releasing it's existing contents. If the window_id is not in the
+  /// buffer an error will be thrown.
   uint16_t * data(const int frame, const size_t window_id=0);
 
   /// return a pointer to the raw data for a given frame, and window extents
+  /// if the data for the requested frame is not loaded
+  /// into the memory buffer, but the window dimensions match a window that is
+  /// loaded, the requested frame will be loaded, keeping all
+  /// of the original windows. The reslults in a single frame for all the windows
+  /// in the memory buffer. If the requested window dimensions do no match an
+  /// existing set, all existing window dimensions are replaced with a single
+  /// window with the requested dimensions. If the frame is out of range of the
+  /// cine file or the window dimensions not valid, an error is thrown.
   uint16_t * data(const int frame,
     const size_t x_begin,
     const size_t x_count,
