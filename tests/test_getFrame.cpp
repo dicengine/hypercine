@@ -22,8 +22,8 @@ int main(int argc, char *argv[]) {
     hc8.read_buffer(hf8);
     cv::Mat img(hc8.height(),hc8.width(),CV_16UC1,hc8.data(frame));
     cv::Mat img_c(hc8.height(),hc8.width(),CV_16UC1,hc8.data(frame+count-1));
-    //img.convertTo(img, CV_8UC1);
-    //cv::imwrite("gold.png",img);
+//    img.convertTo(img, CV_8UC1);
+//    cv::imwrite("gold.png",img);
     // read the same frame using the get_full_frame method
     std::vector<uint16_t> data = hc8.get_frame(frame);
     cv::Mat img_(hc8.height(),hc8.width(),CV_16UC1,&data[0]);
@@ -74,6 +74,17 @@ int main(int argc, char *argv[]) {
     cv::absdiff(img,img_,img_diff);
     cv::minMaxLoc(img_diff,&min_diff,&max_diff,&min_loc,&max_loc);
     std::cout << "10 bit max diff: " << max_diff << std::endl;
+    ASSERT_EXPR(max_diff==0,error_count);
+
+    // read an average of all the frames
+    data = hc8.get_avg_frame(0,10);
+    img_ = cv::Mat(hc8.height(),hc8.width(),CV_16UC1,&data[0]);
+    img_.convertTo(img_, CV_8UC1);
+//    cv::imwrite("avg_img.tif",img_);
+    img = cv::imread("./images/avg_frame_8_bit.tif",cv::IMREAD_GRAYSCALE);
+    cv::absdiff(img,img_,img_diff);
+    cv::minMaxLoc(img_diff,&min_diff,&max_diff,&min_loc,&max_loc);
+    std::cout << "avg frame max diff: " << max_diff << std::endl;
     ASSERT_EXPR(max_diff==0,error_count);
 
   } catch(std::exception& e) {

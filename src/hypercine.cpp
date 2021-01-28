@@ -402,8 +402,12 @@ HyperCine::read_buffer(){
 
 std::vector<uint16_t>
 HyperCine::get_frame(const int frame){
-  std::vector<uint16_t> data;
   DEBUG_MSG("HyperCine::get_frame(): frame " << frame);
+  if(frame<header_.first_image_no||frame>=header_.first_image_no + header_.image_count){
+    std::cout << "error: frame_begin out of range" << std::endl;
+    throw std::invalid_argument("invalid frame");
+  }
+  std::vector<uint16_t> data;
   if(bitmap_header_.bit_depth==BIT_DEPTH_8)
     read_hyperframe_8_bit_full(frame,data);
   else if (bitmap_header_.bit_depth==BIT_DEPTH_16)
@@ -412,6 +416,33 @@ HyperCine::get_frame(const int frame){
     read_hyperframe_10_bit_packed_full(frame,data);
   else
     throw std::invalid_argument("invalid bit depth");
+  return data;
+}
+
+std::vector<uint16_t>
+HyperCine::get_avg_frame(const int frame_begin, const int frame_end){
+  DEBUG_MSG("HyperCine::get_avg_frame(): frame " << frame_begin << " to " << frame_end);
+  if(frame_end<frame_begin){
+    std::cout << "error: frame_end < frame_begin"<<std::endl;
+    throw std::invalid_argument("invalid frame range");
+  }
+  if(frame_begin<header_.first_image_no||frame_begin>=header_.first_image_no + header_.image_count){
+    std::cout << "error: frame_begin out of range" << std::endl;
+    throw std::invalid_argument("invalid frame_begin");
+  }
+  if(frame_end<header_.first_image_no||frame_end>=header_.first_image_no + header_.image_count){
+    std::cout << "error: frame_end out of range" << std::endl;
+    throw std::invalid_argument("invalid frame_end");
+  }
+  std::vector<uint16_t> data(bitmap_header_.width*bitmap_header_.height,0.0);
+  for(int frame=frame_begin;frame<=frame_end;++frame){
+    std::vector<uint16_t> temp_data = get_frame(frame);
+    assert(temp_data.size()==data.size());
+    for(size_t i=0;i<data.size();++i)
+      data[i]+=temp_data[i];
+  }
+  for(size_t i=0;i<data.size();++i)
+    data[i]/=(frame_end-frame_begin+1);
   return data;
 }
 

@@ -458,6 +458,12 @@ public:
   /// it has already been populated with data
   std::vector<uint16_t> get_frame(const int frame);
 
+  /// convenience method to read an average of full frames in a particular range,
+  /// return the data as a copied vector
+  /// of intensity values and not interfere with the memory buffer data_ if
+  /// it has already been populated with data
+  std::vector<uint16_t> get_avg_frame(const int frame_begin, const int frame_end);
+
   // write a frame to cine file
   // NOTE: only implemented for 8-bit array values currently
   static void write_frame(const char * file_name, const size_t width,
