@@ -186,7 +186,7 @@ HyperCine::HyperCine(const char * file_name, Bit_Depth_Conversion_Type type):
     hash_ptr_ = &no_op[0];
   else if(conversion_type_==LINEAR_10_TO_8)
     hash_ptr_ = &lin_10bit_to_8bit[0];
-  else if(conversion_type_==QUAD_10_TO_8 || TO_8_BIT)
+  else if(conversion_type_==QUAD_10_TO_8 || conversion_type_==TO_8_BIT)
     hash_ptr_ = &quad_10bit_to_8bit[0];
   else if(conversion_type_==QUAD_10_TO_12)
     hash_ptr_ = &quad_10bit_to_12bit[0];
