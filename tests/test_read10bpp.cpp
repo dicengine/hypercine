@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
 
   int error_count = 0;
   try {
-    HyperCine hc("./images/packed_12bpp.cine");
+    HyperCine hc("./images/packed_12bpp.cine",HyperCine::LINEAR_10_TO_8);
     // test the bit count of this cine file
     ASSERT_EXPR(hc.bit_count()==8,error_count);
     HyperCine::HyperFrame hf(60,6); // 60, 61, 62, 63, 64, 65

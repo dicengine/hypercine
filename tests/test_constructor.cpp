@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
 
   int error_count = 0;
 
-  HyperCine hc("./images/packed_12bpp.cine");
+  HyperCine hc("./images/packed_12bpp.cine",HyperCine::LINEAR_10_TO_8);
 
   ASSERT_EXPR(hc.header()->type==18755,error_count);
   ASSERT_EXPR(hc.header()->header_size==44,error_count);

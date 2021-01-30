@@ -192,6 +192,14 @@ public:
     NO_SUCH_BIT_DEPTH
   };
 
+  /// Conversion hash enum
+  enum Conversion_Type_10_Bit{
+    NO_CONVERSION=0,
+    LINEAR_10_TO_8,
+    QUAD_10_TO_8,
+    QUAD_10_TO_12
+  };
+
   /// Struct to hold the image information
   struct BitmapHeader{
     /// bitmap size
@@ -361,7 +369,7 @@ public:
 
   /// constructor
   /// \param file_name name of the file to read
-  HyperCine(const char * file_name);
+  HyperCine(const char * file_name, Conversion_Type_10_Bit type=NO_CONVERSION);
   /// destructor
   ~HyperCine(){};
 
@@ -464,6 +472,11 @@ public:
   /// it has already been populated with data
   std::vector<uint16_t> get_avg_frame(const int frame_begin, const int frame_end);
 
+  /// return the type of conversion that was used for 10bit packed
+  Conversion_Type_10_Bit conversion_type()const{
+    return conversion_type_;
+  }
+
   // write a frame to cine file
   // NOTE: only implemented for 8-bit array values currently
   static void write_frame(const char * file_name, const size_t width,
@@ -528,6 +541,10 @@ private:
   std::map<int,std::vector<size_t> > data_indices_;
   /// store the HyperFrame that defines the windows and frames
   HyperFrame hf_;
+  /// type of conversion from 10 bit to 8 or 12 bit
+  Conversion_Type_10_Bit conversion_type_;
+  /// pointer to the hash table for converting 10 bit values to 8 or 12 bit
+  const uint16_t * hash_ptr_;
 };
 
 

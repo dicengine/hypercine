@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 
     // 10 bit packed full frame
 
-    HyperCine hc10("./images/packed_12bpp.cine");
+    HyperCine hc10("./images/packed_12bpp.cine",HyperCine::LINEAR_10_TO_8);
     img = cv::imread("./images/packed_12bpp_frame_60.tiff",cv::IMREAD_GRAYSCALE);
     //cv::imwrite("gold.png",img);
     data = hc10.get_frame(60);
