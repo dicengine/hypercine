@@ -369,7 +369,7 @@ public:
 
   /// constructor
   /// \param file_name name of the file to read
-  HyperCine(const char * file_name, Conversion_Type_10_Bit type=NO_CONVERSION);
+  HyperCine(const char * file_name, Conversion_Type_10_Bit type=QUAD_10_TO_12);
   /// destructor
   ~HyperCine(){};
 
@@ -475,6 +475,18 @@ public:
   /// return the type of conversion that was used for 10bit packed
   Conversion_Type_10_Bit conversion_type()const{
     return conversion_type_;
+  }
+
+  /// return the conversion factor needed to convert the intensity values in the memory
+  /// buffer to 8 bit
+  float conversion_factor_to_8_bit()const{
+    return 255.0f/(bitmap_header_.clr_important-1.0f);
+  }
+
+  /// return the conversion factor needed to convert the intensity values in the memory
+  /// buffer to 16 bit
+  float conversion_factor_to_16_bit()const{
+    return 65535.0f/(bitmap_header_.clr_important-1.0f);
   }
 
   // write a frame to cine file
