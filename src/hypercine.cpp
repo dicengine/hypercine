@@ -178,14 +178,15 @@ const static uint16_t quad_10bit_to_12bit[1024] =
  3732,3740, 3749,3757,3765,3773,3781,3789,3798,3806,3814,3822,3830,3839,3847,3855,3863,3872, 3880,3888,3897,3905,3913,3922,3930,3938,3947,3955,3963,3972,3980,3989,3997,4006, 4014,4022,4031,4039,4048,4056,
  4064,4095,4095,4095,4095,4095,4095,4095,4095,4095};
 
-HyperCine::HyperCine(const char * file_name, Conversion_Type_10_Bit type):
+HyperCine::HyperCine(const char * file_name, Bit_Depth_Conversion_Type type):
   file_name_(file_name),
-  conversion_type_(type){
+  conversion_type_(type),
+  conversion_factor_16_to_8_(1.0f){
   if(conversion_type_==NO_CONVERSION)
     hash_ptr_ = &no_op[0];
   else if(conversion_type_==LINEAR_10_TO_8)
     hash_ptr_ = &lin_10bit_to_8bit[0];
-  else if(conversion_type_==QUAD_10_TO_8)
+  else if(conversion_type_==QUAD_10_TO_8 || TO_8_BIT)
     hash_ptr_ = &quad_10bit_to_8bit[0];
   else if(conversion_type_==QUAD_10_TO_12)
     hash_ptr_ = &quad_10bit_to_12bit[0];
@@ -404,6 +405,10 @@ HyperCine::read_header(const char * file_name){
     bitmap_header_.bit_depth=BIT_DEPTH_16;
     if(bitmap_header_.clr_important==0)
       bitmap_header_.clr_important = 65536;
+    if(conversion_type_==TO_8_BIT){
+      conversion_factor_16_to_8_ = 255.0f/(bitmap_header_.clr_important-1);
+      bitmap_header_.clr_important = 256;
+    }
   }
   else if (bit_depth==10){
     // if the bit_depth is 8 or 10_packed, the data is stored in single bytes so the bit_count needs to be changed to 8
@@ -665,6 +670,7 @@ HyperCine::read_hyperframe_16_bit_full(const int frame, std::vector<uint16_t> & 
     std::cout << "Error, can't open the file: " << file_name_ << std::endl;
     throw std::exception();
   }
+  DEBUG_MSG("HyperCine::read_hyperframe_16_bit_full(): conversion factor " << conversion_factor_16_to_8_);
   // the buffer needs to be sized as big as the largest row among the windows in the hyperframe
   std::vector<char> window_row_buffer(bitmap_header_.width*bitmap_header_.height*2);
   DEBUG_MSG("HyperCine::read_hyperframe_16_bit_full(): window row buffer storage size " << window_row_buffer.size());
@@ -684,7 +690,7 @@ HyperCine::read_hyperframe_16_bit_full(const int frame, std::vector<uint16_t> & 
     // unpack the image data from the array
     for(size_t px=0;px<bitmap_header_.width;++px){
       const size_t data_index = (bitmap_header_.height-row-1)*bitmap_header_.width + px;
-      data[data_window_start+data_index] = window_row_buff_ptr[px];
+      data[data_window_start+data_index] = static_cast<uint16_t>(window_row_buff_ptr[px]*conversion_factor_16_to_8_);
       total_px_read++;
     } // end pixel iterator
   } // end window row iterator
@@ -710,6 +716,7 @@ HyperCine::read_hyperframe_16_bit(){
   }
 
   // the buffer needs to be sized as big as the largest row among the windows in the hyperframe
+  DEBUG_MSG("HyperCine::read_hyperframe_16_bit(): conversion factor " << conversion_factor_16_to_8_);
   const int window_row_buffer_size = (hf_.buffer_row_size()+1)*2; // +1 to oversize
   std::vector<char> window_row_buffer(window_row_buffer_size);
   DEBUG_MSG("HyperCine::read_hyperframe_16_bit(): window row buffer storage size " << window_row_buffer.size());
@@ -740,7 +747,7 @@ HyperCine::read_hyperframe_16_bit(){
         // unpack the image data from the array
         for(size_t px=0;px<window_width;++px){
           const size_t data_index = (window_height-row-1)*window_width + px;
-          data_[data_window_start+data_index] = window_row_buff_ptr[px];
+          data_[data_window_start+data_index] = static_cast<uint16_t>(window_row_buff_ptr[px]*conversion_factor_16_to_8_);
           // below is how the buffer values needed to be split between uint8_t slots when the
           // memory buffer used to be uint8_t type, now it's uint16_t so the values don't need to be split anymore
           // data_[(data_window_start+data_index)*2] = window_row_buff_ptr[px] & 0xff; // split the 16bit value between two bits

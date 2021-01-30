@@ -48,12 +48,12 @@ int main(int argc, char *argv[]) {
 
     // 16 bit full frame
 
-    HyperCine hc16("./images/phantom_v7_raw_16bpp.cine");
+    HyperCine hc16("./images/phantom_v7_raw_16bpp.cine",hypercine::HyperCine::TO_8_BIT);
     img = cv::imread("./images/phantom_v7_raw_16bpp_frame_238292.tiff",cv::IMREAD_GRAYSCALE);
     //cv::imwrite("gold.png",img);
     data = hc16.get_frame(238292);
     img_ = cv::Mat(hc16.height(),hc16.width(),CV_16UC1,&data[0]);
-    img_.convertTo(img_,CV_8UC1,255.0/hc16.max_possible_intensity());
+    img_.convertTo(img_,CV_8UC1);//,255.0/hc16.max_possible_intensity());
     //cv::imwrite("gold_not.png",img_);
     // diff the two
     cv::absdiff(img,img_,img_diff);

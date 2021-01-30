@@ -193,8 +193,9 @@ public:
   };
 
   /// Conversion hash enum
-  enum Conversion_Type_10_Bit{
+  enum Bit_Depth_Conversion_Type{
     NO_CONVERSION=0,
+    TO_8_BIT,
     LINEAR_10_TO_8,
     QUAD_10_TO_8,
     QUAD_10_TO_12
@@ -369,7 +370,7 @@ public:
 
   /// constructor
   /// \param file_name name of the file to read
-  HyperCine(const char * file_name, Conversion_Type_10_Bit type=QUAD_10_TO_12);
+  HyperCine(const char * file_name, Bit_Depth_Conversion_Type type=QUAD_10_TO_12);
   /// destructor
   ~HyperCine(){};
 
@@ -473,7 +474,7 @@ public:
   std::vector<uint16_t> get_avg_frame(const int frame_begin, const int frame_end);
 
   /// return the type of conversion that was used for 10bit packed
-  Conversion_Type_10_Bit conversion_type()const{
+  Bit_Depth_Conversion_Type conversion_type()const{
     return conversion_type_;
   }
 
@@ -553,10 +554,14 @@ private:
   std::map<int,std::vector<size_t> > data_indices_;
   /// store the HyperFrame that defines the windows and frames
   HyperFrame hf_;
-  /// type of conversion from 10 bit to 8 or 12 bit
-  Conversion_Type_10_Bit conversion_type_;
+  /// type of conversion from 10 bit to 8 or 12 bit, or 16 to 8 bit
+  Bit_Depth_Conversion_Type conversion_type_;
   /// pointer to the hash table for converting 10 bit values to 8 or 12 bit
   const uint16_t * hash_ptr_;
+  /// conversion factor for converting 16bit images to 8 bit
+  /// unlike the 10 bit images that use a hash look up to convert the values,
+  /// 16 bit images use a conversion factor (because the tables would be large to store)
+  float conversion_factor_16_to_8_;
 };
 
 

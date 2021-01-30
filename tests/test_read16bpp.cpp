@@ -15,16 +15,17 @@ int main(int argc, char *argv[]) {
 
   int error_count = 0;
   try {
-    HyperCine hc("./images/phantom_v7_raw_16bpp.cine");
+    HyperCine hc("./images/phantom_v7_raw_16bpp.cine",hypercine::HyperCine::TO_8_BIT);
     HyperCine::HyperFrame hf(238292,6);
     // don't add any regions of interest so the whole image is read on the first iteration
     hc.read_buffer(hf);
     cv::Mat img(hc.height(),hc.width(),CV_16UC1,hc.data(238292));
-    img.convertTo(img,CV_8UC1,255.0/hc.max_possible_intensity());
+    img.convertTo(img,CV_8UC1);//,255.0/hc.max_possible_intensity());
     //cv::imwrite("phantom_v7_raw_16bpp_frame_238292.tiff",img);
 
     // read the gold file
     cv::Mat gold_img = cv::imread("./images/phantom_v7_raw_16bpp_frame_238292.tiff",cv::IMREAD_GRAYSCALE);
+    //cv::imwrite("phantom_v7_raw_16bpp_frame_238292.tiff",gold_img);
     cv::Mat img_diff;
     cv::absdiff(gold_img,img,img_diff);
     double min_diff, max_diff;
@@ -51,6 +52,7 @@ int main(int argc, char *argv[]) {
 
     // read the gold file and compare
     cv::Mat gold_img_roi_0 = cv::imread("./images/phantom_v7_raw_16bpp_frame_238292_roi_0.tiff",cv::IMREAD_GRAYSCALE);
+    //cv::imwrite("phantom_v7_raw_16bpp_frame_238292_roi_0.tiff",gold_img_roi_0);
     cv::Mat img_diff_roi_0;
     cv::absdiff(gold_img_roi_0,img_roi_0,img_diff_roi_0);
     cv::minMaxLoc(img_diff_roi_0,&min_diff,&max_diff,&min_loc,&max_loc);
