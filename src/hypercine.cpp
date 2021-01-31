@@ -474,7 +474,7 @@ HyperCine::read_buffer(){
   }
   for(std::set<int>::const_iterator set_it = hf_.frame_ids()->begin();set_it!=hf_.frame_ids()->end();++set_it){
     int frame = *set_it;
-    int end_frame = header_.first_image_no + header_.image_count - 1;
+    int end_frame = (int)header_.first_image_no + (int)header_.image_count - 1;
     int begin_frame = header_.first_image_no;
     if(frame<begin_frame||frame>end_frame){
       std::cout << "error: invalid frame requested: " << *set_it << std::endl;
@@ -522,7 +522,7 @@ HyperCine::read_buffer(){
 std::vector<uint16_t>
 HyperCine::get_frame(const int frame){
   DEBUG_MSG("HyperCine::get_frame(): frame " << frame);
-  if(frame<header_.first_image_no||frame>=header_.first_image_no + header_.image_count){
+  if(frame<(int)header_.first_image_no||frame>=(int)header_.first_image_no + (int)header_.image_count){
     std::cout << "error: frame_begin out of range" << std::endl;
     throw std::invalid_argument("invalid frame");
   }
@@ -545,11 +545,11 @@ HyperCine::get_avg_frame(const int frame_begin, const int frame_end){
     std::cout << "error: frame_end < frame_begin"<<std::endl;
     throw std::invalid_argument("invalid frame range");
   }
-  if(frame_begin<header_.first_image_no||frame_begin>=header_.first_image_no + header_.image_count){
+  if(frame_begin<(int)header_.first_image_no||frame_begin>=(int)header_.first_image_no + (int)header_.image_count){
     std::cout << "error: frame_begin out of range" << std::endl;
     throw std::invalid_argument("invalid frame_begin");
   }
-  if(frame_end<header_.first_image_no||frame_end>=header_.first_image_no + header_.image_count){
+  if(frame_end<(int)header_.first_image_no||frame_end>=(int)header_.first_image_no + (int)header_.image_count){
     std::cout << "error: frame_end out of range" << std::endl;
     throw std::invalid_argument("invalid frame_end");
   }
