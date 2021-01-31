@@ -109,6 +109,7 @@
 #define BUFFER_MSG(var,val) do { std::cout << "[--BUFFER_OUT--]: " << var <<  " " << val << std::endl; } while (0)
 
 # define ASSERT_EXPR(test,count){if(test){}else{std::cout << "[-- failed assertion --](" << __FILE__ <<  " line "<< __LINE__ <<"): " <<  #test << std::endl;count++;}}
+# define ASSERT_OR_EXCEPTION(test){if(test){}else{std::cout << "[-- failed assertion --](" << __FILE__ <<  " line "<< __LINE__ <<"): " <<  #test << std::endl;throw std::exception();}}
 # define MAX_WRITE_FRAMES 20000
 # define HEADER_SIZE 44  // 36 + sizeof(TIME64)
 # define BITMAP_HEADER_SIZE 40
@@ -429,7 +430,7 @@ public:
     return header_.first_image_no;
   }
 
-  /// return the first frame id
+  /// return the number of frames in the entire file
   int file_frame_count()const{
     return header_.image_count;
   }

@@ -43,7 +43,6 @@
 
 #include <iostream>
 #include <fstream>
-#include <cassert>
 #include <math.h>
 #include <iomanip>
 
@@ -321,13 +320,13 @@ HyperCine::read_header(const char * file_name){
   test_size += sizeof(header_.off_setup);
   test_size += sizeof(header_.off_image_offsets);
   test_size += sizeof(header_.trigger_time);
-  assert(test_size==header_.header_size);
+  ASSERT_OR_EXCEPTION(test_size==header_.header_size);
   cine_file.read(reinterpret_cast<char*>(&header_.compression), sizeof(header_.compression));
   DEBUG_MSG("HyperCine::read_header(): header compression:   " << header_.compression);
-  assert(header_.compression==0);
+  ASSERT_OR_EXCEPTION(header_.compression==0);
   cine_file.read(reinterpret_cast<char*>(&header_.version), sizeof(header_.version));
   DEBUG_MSG("HyperCine::read_header(): header version:       " << header_.version);
-  assert(header_.version==1);
+  ASSERT_OR_EXCEPTION(header_.version==1);
   cine_file.read(reinterpret_cast<char*>(&header_.first_movie_image), sizeof(header_.first_movie_image));
   DEBUG_MSG("HyperCine::read_header(): header first mov img: " << header_.first_movie_image);
   cine_file.read(reinterpret_cast<char*>(&header_.total_image_count), sizeof(header_.total_image_count));
@@ -338,7 +337,7 @@ HyperCine::read_header(const char * file_name){
   DEBUG_MSG("HyperCine::read_header(): header image count:   " << header_.image_count);
   cine_file.read(reinterpret_cast<char*>(&header_.off_image_header), sizeof(header_.off_image_header));
   DEBUG_MSG("HyperCine::read_header(): offset image header:  " << header_.off_image_header);
-  assert((int)header_.off_image_header==test_size);
+  ASSERT_OR_EXCEPTION((int)header_.off_image_header==test_size);
   cine_file.read(reinterpret_cast<char*>(&header_.off_setup), sizeof(header_.off_setup));
   DEBUG_MSG("HyperCine::read_header(): offset setup:         " << header_.off_setup);
   cine_file.read(reinterpret_cast<char*>(&header_.off_image_offsets), sizeof(header_.off_image_offsets));
@@ -365,7 +364,7 @@ HyperCine::read_header(const char * file_name){
   header_test_size += sizeof(bitmap_header_.y_pixels_per_meter);
   header_test_size += sizeof(bitmap_header_.clr_used);
   header_test_size += sizeof(bitmap_header_.clr_important);
-  assert(header_test_size==(int)bitmap_header_.size);
+  ASSERT_OR_EXCEPTION(header_test_size==(int)bitmap_header_.size);
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.width), sizeof(bitmap_header_.width));
   DEBUG_MSG("HyperCine::read_header(): bitmap width:            " << bitmap_header_.width);
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.height), sizeof(bitmap_header_.height));
@@ -378,12 +377,12 @@ HyperCine::read_header(const char * file_name){
   DEBUG_MSG("HyperCine::read_header(): bitmap num planes:       " << bitmap_header_.planes);
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.bit_count), sizeof(bitmap_header_.bit_count));
   DEBUG_MSG("HyperCine::read_header(): bitmap bit count:        " << bitmap_header_.bit_count);
-  assert(bitmap_header_.bit_count==8||bitmap_header_.bit_count==16);
+  ASSERT_OR_EXCEPTION(bitmap_header_.bit_count==8||bitmap_header_.bit_count==16);
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.compression), sizeof(bitmap_header_.compression));
   DEBUG_MSG("HyperCine::read_header(): bitmap compression:      " << bitmap_header_.compression);
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.size_image), sizeof(bitmap_header_.size_image));
   DEBUG_MSG("HyperCine::read_header(): bitmap image size:       " << bitmap_header_.size_image);
-  assert(bitmap_header_.size_image*header_.image_count <= file_size);
+  ASSERT_OR_EXCEPTION(bitmap_header_.size_image*header_.image_count <= file_size);
   int bit_depth = (bitmap_header_.size_image * 8) / (bitmap_header_.width * bitmap_header_.height);
   DEBUG_MSG("HyperCine::read_header(): bitmap actual bit count: " << bit_depth);
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.x_pixels_per_meter), sizeof(bitmap_header_.x_pixels_per_meter));
@@ -392,7 +391,7 @@ HyperCine::read_header(const char * file_name){
   DEBUG_MSG("HyperCine::read_header(): bitmap y pels/meter:     " << bitmap_header_.y_pixels_per_meter);
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.clr_used), sizeof(bitmap_header_.clr_used));
   DEBUG_MSG("HyperCine::read_header(): bitmap colors used:      " << bitmap_header_.clr_used);
-  assert(bitmap_header_.clr_used==0);
+  ASSERT_OR_EXCEPTION(bitmap_header_.clr_used==0);
   cine_file.read(reinterpret_cast<char*>(&bitmap_header_.clr_important), sizeof(bitmap_header_.clr_important));
   DEBUG_MSG("HyperCine::read_header(): important colors:        " << bitmap_header_.clr_important);
 
@@ -433,7 +432,7 @@ HyperCine::read_header(const char * file_name){
 
   // read the image offsets:
   cine_file.seekg(header_.off_image_offsets);
-  assert(image_offsets_.size()==header_.image_count);
+  ASSERT_OR_EXCEPTION(image_offsets_.size()==header_.image_count);
   for (size_t i=0;i<header_.image_count;++i){
     int64_t offset;
     cine_file.read(reinterpret_cast<char*>(&offset), sizeof(offset));
@@ -552,7 +551,7 @@ HyperCine::get_avg_frame(const int frame_begin, const int frame_end){
   std::vector<uint16_t> data(bitmap_header_.width*bitmap_header_.height,0.0);
   for(int frame=frame_begin;frame<=frame_end;++frame){
     std::vector<uint16_t> temp_data = get_frame(frame);
-    assert(temp_data.size()==data.size());
+    ASSERT_OR_EXCEPTION(temp_data.size()==data.size());
     for(size_t i=0;i<data.size();++i)
       data[i]+=temp_data[i];
   }
@@ -834,7 +833,7 @@ HyperCine::read_hyperframe_10_bit_packed(){
   }
   // the buffer needs to be sized as big as the largest row among the windows in the hyperframe
   const int window_row_buffer_size = ceil(((hf_.buffer_row_size()+1)*10)/8); // 10 bits per pixel divided by 8 to get bytes, +1 to oversize
-  assert(((hf_.buffer_row_size()+1)*10)/8<=window_row_buffer_size);
+  ASSERT_OR_EXCEPTION(((hf_.buffer_row_size()+1)*10)/8<=window_row_buffer_size);
   std::vector<char> window_row_buffer(window_row_buffer_size);
   DEBUG_MSG("HyperCine::read_buffer(): window row buffer storage size " << window_row_buffer.size());
   // position to the first frame in this set:
