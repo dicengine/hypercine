@@ -430,6 +430,11 @@ HyperCine::read_header(const char * file_name){
     throw std::invalid_argument("invalid bit depth");
   }
 
+  cine_file.seekg(header_.off_setup);
+  uint16_t frame_rate;
+  cine_file.read(reinterpret_cast<char*>(&frame_rate), sizeof(frame_rate));
+  bitmap_header_.frame_rate = frame_rate;
+
   // read the image offsets:
   cine_file.seekg(header_.off_image_offsets);
   ASSERT_OR_EXCEPTION(image_offsets_.size()==header_.image_count);

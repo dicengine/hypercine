@@ -228,6 +228,8 @@ public:
     uint32_t clr_important;
     /// bit depth of the file
     Bit_Depth bit_depth;
+    /// frame rate
+    uint16_t frame_rate;
   };
 
   /// struct to hold the image bounds requested during a file read
@@ -403,6 +405,9 @@ public:
 
   /// return the bit depth (this is an enum)
   Bit_Depth bit_depth() const{return bitmap_header_.bit_depth;}
+
+  /// return the bit depth (this is an enum)
+  uint16_t frame_rate() const{return bitmap_header_.frame_rate;}
 
   /// return the bit count (either 8 or 16, BIT_DEPTH_8=8, BIT_DEPTH_!0_PACKED=8, BIT_DEPTH_16=16)
   int bit_count() const{return bitmap_header_.bit_count;}

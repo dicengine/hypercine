@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
   int error_count = 0;
   try {
     HyperCine hc("./images/phantom_v7_raw_16bpp.cine",hypercine::HyperCine::TO_8_BIT);
+    ASSERT_EXPR(hc.frame_rate()==80,error_count);
     HyperCine::HyperFrame hf(238292,6);
     // don't add any regions of interest so the whole image is read on the first iteration
     hc.read_buffer(hf);
