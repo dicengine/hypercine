@@ -50,7 +50,8 @@ int main(int argc, char *argv[]) {
 
     // test images compared to gold images
     for(int i=0;i<(int)gold_imgs.size();++i){
-      cv::Mat re_read_image(hc.height(0),hc.width(0),CV_16UC1,hc.data(i,0));
+      cv::Mat re_read_image(hc.height(0),hc.width(0),hc.opencv_data_type(),hc.data(i,0));
+      re_read_image.convertTo(re_read_image,CV_16UC1);
       cv::Mat img_diff;
       double min_diff, max_diff;
       cv::Point min_loc, max_loc;

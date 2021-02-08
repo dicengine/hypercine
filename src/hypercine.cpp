@@ -215,7 +215,7 @@ HyperCine::buffer_has_window(const size_t window_id) const{
 }
 
 /// return a pointer to the raw data for a given frame and window
-uint16_t *
+storage_t *
 HyperCine::data(const int frame, const size_t window_id){
   // first check if no data has been read into the buffer
   if(data_indices_.size()==0){
@@ -247,7 +247,7 @@ HyperCine::data(const int frame, const size_t window_id){
 }
 
 /// return a pointer to the raw data for a given frame and window
-uint16_t *
+storage_t *
 HyperCine::data(const int frame,
   const size_t x_begin,
   const size_t x_count,
@@ -499,8 +499,6 @@ HyperCine::read_buffer(){
   // clear the buffer
   data_.clear();
   data_indices_.clear();
-  // data array is sized in two byte (uint16_t) increments regardless of bit-depth
-  // (for 8-bit images, one of those bytes remains empty, but the memory is still contiguous)
   data_.resize(hf_.num_pixels_per_frame()*hf_.num_frames());
   DEBUG_MSG("HyperCine::read_buffer(): data storage size " << data_.size());
 
@@ -519,14 +517,14 @@ HyperCine::read_buffer(){
     throw std::invalid_argument("invalid bit depth");
 }
 
-std::vector<uint16_t>
+std::vector<storage_t>
 HyperCine::get_frame(const int frame){
   DEBUG_MSG("HyperCine::get_frame(): frame " << frame);
   if(frame<(int)header_.first_image_no||frame>=(int)header_.first_image_no + (int)header_.image_count){
     std::cout << "error: frame_begin out of range" << std::endl;
     throw std::invalid_argument("invalid frame");
   }
-  std::vector<uint16_t> data;
+  std::vector<storage_t> data;
   if(bitmap_header_.bit_depth==BIT_DEPTH_8)
     read_hyperframe_8_bit_full(frame,data);
   else if (bitmap_header_.bit_depth==BIT_DEPTH_16)
@@ -538,7 +536,7 @@ HyperCine::get_frame(const int frame){
   return data;
 }
 
-std::vector<uint16_t>
+std::vector<storage_t>
 HyperCine::get_avg_frame(const int frame_begin, const int frame_end){
   DEBUG_MSG("HyperCine::get_avg_frame(): frame " << frame_begin << " to " << frame_end);
   if(frame_end<frame_begin){
@@ -553,9 +551,9 @@ HyperCine::get_avg_frame(const int frame_begin, const int frame_end){
     std::cout << "error: frame_end out of range" << std::endl;
     throw std::invalid_argument("invalid frame_end");
   }
-  std::vector<uint16_t> data(bitmap_header_.width*bitmap_header_.height,0.0);
+  std::vector<storage_t> data(bitmap_header_.width*bitmap_header_.height,0.0);
   for(int frame=frame_begin;frame<=frame_end;++frame){
-    std::vector<uint16_t> temp_data = get_frame(frame);
+    std::vector<storage_t> temp_data = get_frame(frame);
     ASSERT_OR_EXCEPTION(temp_data.size()==data.size());
     for(size_t i=0;i<data.size();++i)
       data[i]+=temp_data[i];
@@ -566,7 +564,7 @@ HyperCine::get_avg_frame(const int frame_begin, const int frame_end){
 }
 
 void
-HyperCine::read_hyperframe_8_bit_full(const int frame, std::vector<uint16_t> & data){
+HyperCine::read_hyperframe_8_bit_full(const int frame, std::vector<storage_t> & data){
   //
   // NOTE: in 8bit format the images are stored upside down!
   //
@@ -661,7 +659,7 @@ HyperCine::read_hyperframe_8_bit(){
 }
 
 void
-HyperCine::read_hyperframe_16_bit_full(const int frame, std::vector<uint16_t> & data){
+HyperCine::read_hyperframe_16_bit_full(const int frame, std::vector<storage_t> & data){
   //
   // NOTE: in 16bit format the images are stored upside down!
   //
@@ -694,7 +692,7 @@ HyperCine::read_hyperframe_16_bit_full(const int frame, std::vector<uint16_t> & 
     // unpack the image data from the array
     for(size_t px=0;px<bitmap_header_.width;++px){
       const size_t data_index = (bitmap_header_.height-row-1)*bitmap_header_.width + px;
-      data[data_window_start+data_index] = static_cast<uint16_t>(window_row_buff_ptr[px]*conversion_factor_16_to_8_);
+      data[data_window_start+data_index] = window_row_buff_ptr[px]*conversion_factor_16_to_8_;
       total_px_read++;
     } // end pixel iterator
   } // end window row iterator
@@ -751,7 +749,7 @@ HyperCine::read_hyperframe_16_bit(){
         // unpack the image data from the array
         for(size_t px=0;px<window_width;++px){
           const size_t data_index = (window_height-row-1)*window_width + px;
-          data_[data_window_start+data_index] = static_cast<uint16_t>(window_row_buff_ptr[px]*conversion_factor_16_to_8_);
+          data_[data_window_start+data_index] = window_row_buff_ptr[px]*conversion_factor_16_to_8_;
           // below is how the buffer values needed to be split between uint8_t slots when the
           // memory buffer used to be uint8_t type, now it's uint16_t so the values don't need to be split anymore
           // data_[(data_window_start+data_index)*2] = window_row_buff_ptr[px] & 0xff; // split the 16bit value between two bits
@@ -765,7 +763,7 @@ HyperCine::read_hyperframe_16_bit(){
 }
 
 void
-HyperCine::read_hyperframe_10_bit_packed_full(const int frame, std::vector<uint16_t> & data){
+HyperCine::read_hyperframe_10_bit_packed_full(const int frame, std::vector<storage_t> & data){
   DEBUG_MSG("HyperCine::read_hyperframe_10_bit_packed_full():");
   data.clear();
   data.resize(bitmap_header_.width*bitmap_header_.height);

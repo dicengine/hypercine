@@ -59,20 +59,20 @@
 //
 // The actual reading of image data from a cine file is executed by a call to HyerCine.read_buffer(hf),
 // which takes a HyperFrame as an argument to define which parts of the cine file to load into the
-// memory buffer. ***The memory buffer for a HyperCine object is always uint16_t, regardless of the
+// memory buffer. ***The memory buffer for a HyperCine object is always storage_t, regardless of the
 // bit-depth.*** This is enable whatever application is using hypercine to pass the pointer around
 // for the image storage without having to cast between types for 8-bit or 16-bit images. For 8-bit
 // cines (or 10-bit packed cines that get converted to 8-bit values), this leads to an empty 8bits for
 // each storage array value.
 //
 // Accessing the intensity value storage is done through a call to HyperCine.data(), which returns a
-// uint16_t pointer to the storage array, which is always contiguous in memory.
+// storage_t pointer to the storage array, which is always contiguous in memory.
 //
 // For the most basic file read operation, the psuedo-code would look something like this:
 // HyperCine hc(image_file_name); - initialize the cine header info for the specified file
 // HyperFrame hf(frame_begin,frame_count); - define the subset of the cine file that the user would like to read
 // HyperCine.read_buffer(hf); - load this portion of the image data into memory
-// uint16_t * data_ptr = HyperCine.data(); - obtain a pointer to the data to use in the application
+// storage_t * data_ptr = HyperCine.data(); - obtain a pointer to the data to use in the application
 
 
 #ifndef HYPERCINE_H
@@ -116,7 +116,6 @@
 # define IMAGE_WIDTH_OFFSET 48  // 36 + sizeof(TIME64) + 4
 # define IMAGE_COUNT_OFFSET 20  // 4 uint16_t and 3 uint32_t
 
-
 #if defined(WIN32)
   #include <cstdint>
 #else
@@ -127,6 +126,19 @@
 #include <map>
 #include <vector>
 #include <iostream>
+
+#if USE_DOUBLE_STORAGE
+typedef double storage_t;
+#define OPENCV_DATA_TYPE 6
+#endif
+#if USE_FLOAT_STORAGE
+typedef float storage_t;
+#define OPENCV_DATA_TYPE 5
+#endif
+#if USE_INT_STORAGE
+typedef uint16_t storage_t;
+#define OPENCV_DATA_TYPE 2
+#endif
 
 namespace hypercine {
 
@@ -451,7 +463,7 @@ public:
   /// this call will automatically load the requested frame into the buffer
   /// after releasing it's existing contents. If the window_id is not in the
   /// buffer an error will be thrown.
-  uint16_t * data(const int frame, const size_t window_id=0);
+  storage_t * data(const int frame, const size_t window_id=0);
 
   /// return a pointer to the raw data for a given frame, and window extents
   /// if the data for the requested frame is not loaded
@@ -462,7 +474,7 @@ public:
   /// existing set, all existing window dimensions are replaced with a single
   /// window with the requested dimensions. If the frame is out of range of the
   /// cine file or the window dimensions not valid, an error is thrown.
-  uint16_t * data(const int frame,
+  storage_t * data(const int frame,
     const size_t x_begin,
     const size_t x_count,
     const size_t y_begin,
@@ -471,13 +483,17 @@ public:
   /// convenience method to read a full frame, return it as a copied vector
   /// of intensity values and not interfere with the memory buffer data_ if
   /// it has already been populated with data
-  std::vector<uint16_t> get_frame(const int frame);
+  std::vector<storage_t> get_frame(const int frame);
 
   /// convenience method to read an average of full frames in a particular range,
   /// return the data as a copied vector
   /// of intensity values and not interfere with the memory buffer data_ if
   /// it has already been populated with data
-  std::vector<uint16_t> get_avg_frame(const int frame_begin, const int frame_end);
+  std::vector<storage_t> get_avg_frame(const int frame_begin, const int frame_end);
+
+  /// returns the OpenCV macro integer, CV_16UC1 (integer value 2), CV_32FC1 (integer value 5), etc.
+  /// needed to initialize an OpenCV Mat so that the data storage is appropriately sized
+  int opencv_data_type()const{return OPENCV_DATA_TYPE;}
 
   /// return the type of conversion that was used for 10bit packed
   Bit_Depth_Conversion_Type conversion_type()const{
@@ -497,7 +513,7 @@ public:
   }
 
   // write a frame to cine file
-  // NOTE: only implemented for 8-bit array values currently
+  // NOTE only implemented for 16bit values currently
   static void write_frame(const char * file_name, const size_t width,
     const size_t height, uint16_t * data, const bool overwrite=false);
 
@@ -521,7 +537,7 @@ private:
   /// so it can be called without clearing the stored memory buffer
   /// It's used to get a copy of a single frame while the buffer may already be populated with
   /// data from what's defined in hf_
-  void read_hyperframe_10_bit_packed_full(const int frame, std::vector<uint16_t> & data);
+  void read_hyperframe_10_bit_packed_full(const int frame, std::vector<storage_t> & data);
 
   /// method to read a hyperframe into the buffer for an 8bit cine file
   void read_hyperframe_8_bit();
@@ -532,7 +548,7 @@ private:
   /// so it can be called without clearing the stored memory buffer
   /// It's used to get a copy of a single frame while the buffer may already be populated with
   /// data from what's defined in hf_
-  void read_hyperframe_8_bit_full(const int frame, std::vector<uint16_t> & data);
+  void read_hyperframe_8_bit_full(const int frame, std::vector<storage_t> & data);
 
   /// method to read a hyperframe into the buffer for an 8bit cine file
   void read_hyperframe_16_bit();
@@ -543,7 +559,7 @@ private:
   /// so it can be called without clearing the stored memory buffer
   /// It's used to get a copy of a single frame while the buffer may already be populated with
   /// data from what's defined in hf_
-  void read_hyperframe_16_bit_full(const int frame, std::vector<uint16_t> & data);
+  void read_hyperframe_16_bit_full(const int frame, std::vector<storage_t> & data);
 
   /// struct to hold information such as the indexing into each frame of the video
   CineFileHeader header_;
@@ -554,7 +570,7 @@ private:
   /// the name of the cine file
   std::string file_name_;
   /// buffer for storing date read from cine file in contiguous block (all frames, all windows together)
-  std::vector<uint16_t> data_;
+  std::vector<storage_t> data_;
   /// storage for the index of the first pixel of a frame window for each frame, one vector of indices per frame
   /// (access is [frame][window] to get the index of the first pixel's value in the data_ storage)
   std::map<int,std::vector<size_t> > data_indices_;

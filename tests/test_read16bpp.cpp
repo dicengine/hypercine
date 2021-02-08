@@ -20,7 +20,13 @@ int main(int argc, char *argv[]) {
     HyperCine::HyperFrame hf(238292,6);
     // don't add any regions of interest so the whole image is read on the first iteration
     hc.read_buffer(hf);
-    cv::Mat img(hc.height(),hc.width(),CV_16UC1,hc.data(238292));
+    cv::Mat img(hc.height(),hc.width(),hc.opencv_data_type(),hc.data(238292));
+    // truncate the values in the Mat so they are integer numbers
+    for(int y=0;y<img.rows;++y){
+      for(int x=0;x<img.cols;++x){
+        img.at<storage_t>(y,x) =  std::floor(img.at<storage_t>(y,x));
+      }
+    } // then convert to 8 bit values
     img.convertTo(img,CV_8UC1);//,255.0/hc.max_possible_intensity());
     //cv::imwrite("phantom_v7_raw_16bpp_frame_238292.tiff",img);
 
@@ -47,7 +53,13 @@ int main(int argc, char *argv[]) {
       std::cout << "invalid frame or window should have been caught" << std::endl;
       error_count ++;
     }
-    cv::Mat img_roi_0(hc.height(0),hc.width(0),CV_16UC1,hc.data(238292,0));
+    cv::Mat img_roi_0(hc.height(0),hc.width(0),hc.opencv_data_type(),hc.data(238292,0));
+    // truncate the values in the Mat so they are integer numbers
+    for(int y=0;y<img_roi_0.rows;++y){
+      for(int x=0;x<img_roi_0.cols;++x){
+        img_roi_0.at<storage_t>(y,x) =  std::floor(img_roi_0.at<storage_t>(y,x));
+      }
+    } // then convert to 8 bit values
     img_roi_0.convertTo(img_roi_0,CV_8UC1,255.0/hc.max_possible_intensity());
     //cv::imwrite("phantom_v7_raw_16bpp_frame_238292_roi_0.tiff",img_roi_0);
 

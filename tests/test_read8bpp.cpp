@@ -14,12 +14,12 @@ int main(int argc, char *argv[]) {
     HyperCine::HyperFrame hf(0,11);
     // don't add any regions of interest so the whole image is read on the first iteration
     hc.read_buffer(hf);
-    cv::Mat img(hc.height(),hc.width(),CV_16UC1,hc.data(10));
+    cv::Mat img(hc.height(),hc.width(),hc.opencv_data_type(),hc.data(10));
     // cv::imwrite("example_8bpp_frame_11.tiff",img);
 
     // read the gold file
     cv::Mat gold_img = cv::imread("./images/example_8bpp_frame_11.tiff",cv::IMREAD_GRAYSCALE);
-    gold_img.convertTo(gold_img, CV_16UC1);
+    gold_img.convertTo(gold_img,hc.opencv_data_type());
     cv::Mat img_diff;
     cv::absdiff(gold_img,img,img_diff);
     double min_diff, max_diff;
@@ -36,12 +36,12 @@ int main(int argc, char *argv[]) {
       std::cout << "invalid frame" << std::endl;
       error_count ++;
     }
-    cv::Mat img_roi_0(hc.height(0),hc.width(0),CV_16UC1,hc.data(10,0));
+    cv::Mat img_roi_0(hc.height(0),hc.width(0),hc.opencv_data_type(),hc.data(10,0));
     // cv::imwrite("example_8bpp_frame_10_roi_0.tiff",img_roi_0);
 
     // read the gold file and compare
     cv::Mat gold_img_roi_0 = cv::imread("./images/example_8bpp_frame_10_roi_0.tiff",cv::IMREAD_GRAYSCALE);
-    gold_img_roi_0.convertTo(gold_img_roi_0, CV_16UC1);
+    gold_img_roi_0.convertTo(gold_img_roi_0,hc.opencv_data_type());
     cv::Mat img_diff_roi_0;
     cv::absdiff(gold_img_roi_0,img_roi_0,img_diff_roi_0);
     cv::minMaxLoc(img_diff_roi_0,&min_diff,&max_diff,&min_loc,&max_loc);

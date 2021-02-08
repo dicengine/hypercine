@@ -18,11 +18,11 @@ int main(int argc, char *argv[]) {
     hc.read_buffer(hf);
     std::cout << hc << std::endl;
 
-    cv::Mat img(hc.height(),hc.width(),CV_16UC1,hc.data(60,0));
+    cv::Mat img(hc.height(),hc.width(),hc.opencv_data_type(),hc.data(60,0));
     // cv::imwrite("packed_12bpp_frame_60.tiff",img);
     // read the gold file
     cv::Mat gold_img = cv::imread("./images/packed_12bpp_frame_60.tiff",cv::IMREAD_GRAYSCALE);
-    gold_img.convertTo(gold_img, CV_16UC1); // required since the gold images were saved when the buffers were still 8 bit
+    gold_img.convertTo(gold_img, hc.opencv_data_type()); // required since the gold images were saved when the buffers were still 8 bit
     cv::Mat img_diff;
     cv::absdiff(gold_img,img,img_diff);
     double min_diff, max_diff;
@@ -59,12 +59,12 @@ int main(int argc, char *argv[]) {
       std::cout << "invalid frame should have been caught" << std::endl;
       error_count ++;
     }
-    cv::Mat img_roi_0(hc.height(0),hc.width(0),CV_16UC1,hc.data(65,0));
-    cv::Mat img_roi_1(hc.height(1),hc.width(1),CV_16UC1,hc.data(60,1));
+    cv::Mat img_roi_0(hc.height(0),hc.width(0),hc.opencv_data_type(),hc.data(65,0));
+    cv::Mat img_roi_1(hc.height(1),hc.width(1),hc.opencv_data_type(),hc.data(60,1));
     // cv::imwrite("packed_12bpp_frame_65_roi.tiff",img_roi);
     // read the gold files and compare
     cv::Mat gold_img_roi_0 = cv::imread("./images/packed_12bpp_frame_65_roi_0.tiff",cv::IMREAD_GRAYSCALE);
-    gold_img_roi_0.convertTo(gold_img_roi_0, CV_16UC1);
+    gold_img_roi_0.convertTo(gold_img_roi_0,hc.opencv_data_type());
     cv::Mat img_diff_roi_0;
     cv::absdiff(gold_img_roi_0,img_roi_0,img_diff_roi_0);
     cv::minMaxLoc(img_diff_roi_0,&min_diff,&max_diff,&min_loc,&max_loc);
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     ASSERT_EXPR(max_diff==0,error_count);
 
     cv::Mat gold_img_roi_1 = cv::imread("./images/packed_12bpp_frame_60_roi_1.tiff",cv::IMREAD_GRAYSCALE);
-    gold_img_roi_1.convertTo(gold_img_roi_1, CV_16UC1);
+    gold_img_roi_1.convertTo(gold_img_roi_1,hc.opencv_data_type());
     cv::Mat img_diff_roi_1;
     cv::absdiff(gold_img_roi_1,img_roi_1,img_diff_roi_1);
     cv::minMaxLoc(img_diff_roi_1,&min_diff,&max_diff,&min_loc,&max_loc);
