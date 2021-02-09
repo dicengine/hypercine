@@ -458,6 +458,15 @@ public:
   /// returns true if the window id has been loaded into the data buffer
   bool buffer_has_window(const size_t window_id) const;
 
+  /// returns true if the window has been loaded into the data buffer
+  bool buffer_has_frame_window(const int frame,
+    const size_t x_begin,
+    const size_t x_count,
+    const size_t y_begin,
+    const size_t y_count){
+    return buffer_has_frame(frame) && hf_.window_id(x_begin,x_count,y_begin,y_count)>=0;
+  }
+
   /// return a pointer to the raw data for a given frame, and window
   /// if the frame is valid, but out of range of what is loaded in the buffer
   /// this call will automatically load the requested frame into the buffer

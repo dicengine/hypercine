@@ -120,6 +120,9 @@ int main(int argc, char *argv[]) {
     hf2.add_window(x_begin+100,x_count+100,y_begin+25,y_count);
     hf2.add_window(x_begin+12,x_count+100,y_begin+19,y_count+3);
     hc1.read_buffer(hf2);
+    ASSERT_EXPR(hc1.buffer_has_frame_window(5,x_begin,x_count,y_begin,y_count),error_count);
+    ASSERT_EXPR(!hc1.buffer_has_frame_window(5,21,x_count,y_begin,5),error_count);
+    ASSERT_EXPR(!hc1.buffer_has_frame_window(15,x_begin,x_count,y_begin,y_count),error_count);
 
     // valid frame and window id
     DEBUG_MSG("*** testing in-buffer-range frame_id and valid window id provided for initialized buffer");
