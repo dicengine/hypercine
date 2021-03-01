@@ -45,6 +45,7 @@
 #include <fstream>
 #include <math.h>
 #include <iomanip>
+#include <stdexcept>
 
 namespace hypercine {
 
