@@ -898,6 +898,8 @@ HyperCine::read_hyperframe_10_bit_packed(){
 /// overload the ostream operator
 std::ostream& operator<<(std::ostream& os,
   const HyperCine & hc){
+  os << "HyperCine: my address: " << &hc << std::endl;
+  os << "HyperCine: hyperframe address: " << &hc.hf_ << std::endl;
   os << "HyperCine: num frames in data: " << hc.hf_.num_frames() << std::endl;
   os << "HyperCine: num windows per frame: " << hc.hf_.num_windows() << std::endl;
   os << "HyperCine: " << std::left << std::setw(12) << "frame"
