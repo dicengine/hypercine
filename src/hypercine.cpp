@@ -178,6 +178,161 @@ const static uint16_t quad_10bit_to_12bit[1024] =
  3732,3740, 3749,3757,3765,3773,3781,3789,3798,3806,3814,3822,3830,3839,3847,3855,3863,3872, 3880,3888,3897,3905,3913,3922,3930,3938,3947,3955,3963,3972,3980,3989,3997,4006, 4014,4022,4031,4039,4048,4056,
  4064,4095,4095,4095,4095,4095,4095,4095,4095,4095};
 
+HyperCine::HyperFrame::HyperFrame(const int frame, const int count){
+  add_frames(frame,count);
+}
+
+HyperCine::HyperFrame::HyperFrame(const std::set<int> & frame_ids){
+  update_frames(frame_ids);
+}
+
+HyperCine::HyperFrame::HyperFrame(const HyperFrame & hf){
+  frame_ids_ = hf.get_frame_ids();
+  for(size_t i=0;i<hf.num_windows();++i){
+    x_begin_.push_back(hf.window_x_begin(i));
+    y_begin_.push_back(hf.window_y_begin(i));
+    x_count_.push_back(hf.window_width(i));
+    y_count_.push_back(hf.window_height(i));
+  }
+}
+
+void
+HyperCine::HyperFrame::clear(){
+  frame_ids_.clear();
+  x_begin_.clear();
+  y_begin_.clear();
+  x_count_.clear();
+  y_count_.clear();
+}
+
+int
+HyperCine::HyperFrame::window_id(const size_t x_begin,
+  const size_t x_count,
+  const size_t y_begin,
+  const size_t y_count)const{
+  if(num_frames()==0||num_windows()==0){
+    DEBUG_MSG("HyperFrame::window_id(): no frames or windows in HyperFrame");
+    return -1;
+  }
+  for(int window=0; window<(int)num_windows();++window){
+    if(x_count == x_count_[window] &&
+        y_count == y_count_[window] &&
+        x_begin == x_begin_[window] &&
+        y_begin == y_begin_[window]) return window;
+  }
+  return -1;
+}
+
+// add a range of frames to the hyperframe
+void
+HyperCine::HyperFrame::add_frames(const int frame_begin, const int count){
+  for(int i=frame_begin;i<frame_begin+count;++i)
+    frame_ids_.insert(i);
+}
+
+// update a range of frames to the hyperframe
+void
+HyperCine::HyperFrame::update_frames(const int frame_begin, const int count){
+  frame_ids_.clear();
+  add_frames(frame_begin,count);
+}
+
+// add a set of frame ids to the hyperframe
+void
+HyperCine::HyperFrame::update_frames(const std::set<int> & frame_ids){
+  frame_ids_ = frame_ids;
+}
+// return a deep copy of the frame id set
+std::set<int>
+HyperCine::HyperFrame::get_frame_ids()const{
+  return frame_ids_;
+}
+
+// return a pointer to the frame ids
+std::set<int> const *
+HyperCine::HyperFrame::frame_ids()const{
+  return & frame_ids_;
+}
+
+// returns true if the frame exists in the HyperFrame
+bool
+HyperCine::HyperFrame::has_frame(const int frame)const{
+  return frame_ids_.find(frame)!=frame_ids_.end();
+}
+
+// return the number of frames
+size_t
+HyperCine::HyperFrame::num_frames()const{
+  return frame_ids_.size();
+}
+// add a region of interest to the hyperframe
+void
+HyperCine::HyperFrame::add_window(const size_t x_b, const size_t x_c, const size_t y_b, const size_t y_c){
+  x_begin_.push_back(x_b);
+  y_begin_.push_back(y_b);
+  x_count_.push_back(x_c);
+  y_count_.push_back(y_c);
+}
+// returns the number of regions of interst
+size_t
+HyperCine::HyperFrame::num_windows()const{
+  return x_begin_.size();
+}
+
+// return the total number of pixels per frame (including all windows in the frame)
+size_t
+HyperCine::HyperFrame::num_pixels_per_frame()const{
+  size_t num_pixels_pf = 0;
+  for(size_t i=0;i<num_windows();++i)
+    num_pixels_pf += x_count_[i]*y_count_[i];
+  return num_pixels_pf;
+}
+
+// return the number of pixels in the selected window
+size_t
+HyperCine::HyperFrame::num_pixels_per_window(const size_t window_id)const{
+  if(window_id>=num_windows()) return 0;
+  return x_count_[window_id]*y_count_[window_id];
+}
+
+// return the width of the selected window
+size_t
+HyperCine::HyperFrame::window_width(const size_t window_id)const{
+  if(window_id>=num_windows()) return 0;
+  return x_count_[window_id];
+}
+
+// return the height of the selected window
+size_t
+HyperCine::HyperFrame::window_height(const size_t window_id)const{
+  if(window_id>=num_windows()) return 0;
+  return y_count_[window_id];
+}
+
+// return the x begin for the selected window
+size_t
+HyperCine::HyperFrame::window_x_begin(const size_t window_id)const{
+  if(window_id>=num_windows()) return 0;
+  return x_begin_[window_id];
+}
+
+// return the x begin for the selected window
+size_t
+HyperCine::HyperFrame::window_y_begin(const size_t window_id)const{
+  if(window_id>=num_windows()) return 0;
+  return y_begin_[window_id];
+}
+
+// returns the number of pixels required to store an entire row for the widest window
+size_t
+HyperCine::HyperFrame::buffer_row_size()const{
+  size_t max_num_pixels = 0;
+  for(size_t i=0;i<num_windows();++i)
+    if(window_width(i)>max_num_pixels)
+      max_num_pixels = window_width(i);
+  return max_num_pixels;
+}
+
 HyperCine::HyperCine(const char * file_name, Bit_Depth_Conversion_Type type):
   file_name_(file_name),
   conversion_type_(type),

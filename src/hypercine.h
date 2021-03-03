@@ -250,126 +250,49 @@ public:
     // constructor
     HyperFrame(){};
     // constructor with frame id
-    HyperFrame(const int frame, const int count=1){
-      add_frames(frame,count);
-    };
+    HyperFrame(const int frame, const int count=1);
     // constructor with set of frame ids
-    HyperFrame(const std::set<int> & frame_ids){
-      update_frames(frame_ids);
-    };
+    HyperFrame(const std::set<int> & frame_ids);
     // copy constructor
-    HyperFrame(const HyperFrame & hf){
-      frame_ids_ = hf.get_frame_ids();
-      for(size_t i=0;i<hf.num_windows();++i){
-        x_begin_.push_back(hf.window_x_begin(i));
-        y_begin_.push_back(hf.window_y_begin(i));
-        x_count_.push_back(hf.window_width(i));
-        y_count_.push_back(hf.window_height(i));
-      }
-    }
+    HyperFrame(const HyperFrame & hf);
     // reset the hyperframe parameters
-    void clear(){
-      frame_ids_.clear();
-      x_begin_.clear();
-      y_begin_.clear();
-      x_count_.clear();
-      y_count_.clear();
-    }
+    void clear();
     int window_id(const size_t x_begin,
       const size_t x_count,
       const size_t y_begin,
-      const size_t y_count)const{
-      if(num_frames()==0||num_windows()==0){
-        DEBUG_MSG("HyperFrame::window_id(): no frames or windows in HyperFrame");
-        return -1;
-      }
-      for(int window=0; window<(int)num_windows();++window){
-        if(x_count == x_count_[window] &&
-            y_count == y_count_[window] &&
-            x_begin == x_begin_[window] &&
-            y_begin == y_begin_[window]) return window;
-      }
-      return -1;
-    }
+      const size_t y_count)const;
     // add a range of frames to the hyperframe
-    void add_frames(const int frame_begin, const int count=1){
-      for(int i=frame_begin;i<frame_begin+count;++i)
-        frame_ids_.insert(i);
-    }
+    void add_frames(const int frame_begin, const int count=1);
     // update a range of frames to the hyperframe
-    void update_frames(const int frame_begin, const int count=1){
-      frame_ids_.clear();
-      add_frames(frame_begin,count);
-    }
+    void update_frames(const int frame_begin, const int count=1);
     // add a set of frame ids to the hyperframe
-    void update_frames(const std::set<int> & frame_ids){
-      frame_ids_ = frame_ids;
-    }
+    void update_frames(const std::set<int> & frame_ids);
     // return a deep copy of the frame id set
-    std::set<int> get_frame_ids()const{
-      return frame_ids_;
-    }
+    std::set<int> get_frame_ids()const;
     // return a pointer to the frame ids
-    std::set<int> const * frame_ids()const{
-      return & frame_ids_;
-    }
+    std::set<int> const * frame_ids()const;
     // returns true if the frame exists in the HyperFrame
-    bool has_frame(const int frame)const{
-      return frame_ids_.find(frame)!=frame_ids_.end();
-    }
+    bool has_frame(const int frame)const;
     // return the number of frames
-    size_t num_frames()const{
-      return frame_ids_.size();
-    }
+    size_t num_frames()const;
     // add a region of interest to the hyperframe
-    void add_window(const size_t x_b, const size_t x_c, const size_t y_b, const size_t y_c){
-      x_begin_.push_back(x_b);
-      y_begin_.push_back(y_b);
-      x_count_.push_back(x_c);
-      y_count_.push_back(y_c);
-    }
+    void add_window(const size_t x_b, const size_t x_c, const size_t y_b, const size_t y_c);
     // returns the number of regions of interst
-    size_t num_windows()const{return x_begin_.size();}
+    size_t num_windows()const;
     // return the total number of pixels per frame (including all windows in the frame)
-    size_t num_pixels_per_frame()const{
-      size_t num_pixels_pf = 0;
-      for(size_t i=0;i<num_windows();++i)
-        num_pixels_pf += x_count_[i]*y_count_[i];
-      return num_pixels_pf;
-    }
+    size_t num_pixels_per_frame()const;
     // return the number of pixels in the selected window
-    size_t num_pixels_per_window(const size_t window_id)const{
-      if(window_id>=num_windows()) return 0;
-      return x_count_[window_id]*y_count_[window_id];
-    }
+    size_t num_pixels_per_window(const size_t window_id)const;
     // return the width of the selected window
-    size_t window_width(const size_t window_id)const{
-      if(window_id>=num_windows()) return 0;
-      return x_count_[window_id];
-    }
+    size_t window_width(const size_t window_id)const;
     // return the height of the selected window
-    size_t window_height(const size_t window_id)const{
-      if(window_id>=num_windows()) return 0;
-      return y_count_[window_id];
-    }
+    size_t window_height(const size_t window_id)const;
     // return the x begin for the selected window
-    size_t window_x_begin(const size_t window_id)const{
-      if(window_id>=num_windows()) return 0;
-      return x_begin_[window_id];
-    }
+    size_t window_x_begin(const size_t window_id)const;
     // return the x begin for the selected window
-    size_t window_y_begin(const size_t window_id)const{
-      if(window_id>=num_windows()) return 0;
-      return y_begin_[window_id];
-    }
+    size_t window_y_begin(const size_t window_id)const;
     // returns the number of pixels required to store an entire row for the widest window
-    size_t buffer_row_size()const{
-      size_t max_num_pixels = 0;
-      for(size_t i=0;i<num_windows();++i)
-        if(window_width(i)>max_num_pixels)
-          max_num_pixels = window_width(i);
-      return max_num_pixels;
-    }
+    size_t buffer_row_size()const;
   private:
     // storage of frame ids
     std::set<int> frame_ids_;
