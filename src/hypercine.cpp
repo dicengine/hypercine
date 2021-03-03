@@ -350,6 +350,9 @@ HyperCine::HyperCine(const char * file_name, Bit_Depth_Conversion_Type type):
   read_header(file_name);
 }
 
+/// destructor
+HyperCine::~HyperCine(){};
+
 /// check for valid frame (it's loaded into the buffer):
 bool
 HyperCine::buffer_has_frame(const int frame) const{

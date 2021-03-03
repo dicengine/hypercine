@@ -310,7 +310,7 @@ public:
   /// \param file_name name of the file to read
   HyperCine(const char * file_name, Bit_Depth_Conversion_Type type=QUAD_10_TO_12);
   /// destructor
-  ~HyperCine(){};
+  ~HyperCine();
 
   /// method to read the cine file into the storage buffer
   /// \param hf the HyperFrame that defines what regions of interest to read and for what frame range
