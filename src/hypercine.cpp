@@ -1203,4 +1203,121 @@ HyperCine::write_header(const char * file_name, const size_t width, const size_t
   cine_file.close();
 }
 
+/// return pointer to the cine file header
+HyperCine::CineFileHeader *
+HyperCine::header(){
+  return &header_;
+}
+
+/// return pointer to the bitmap header
+HyperCine::BitmapHeader *
+HyperCine::bitmap_header(){
+  return &bitmap_header_;
+}
+
+/// return a pointer to the image offsets
+std::vector<int64_t> *
+HyperCine::image_offsets(){
+  return &image_offsets_;
+}
+
+/// return the filename
+std::string
+HyperCine::file_name()const{
+  return file_name_;
+}
+
+/// return the bit depth (this is an enum)
+HyperCine::Bit_Depth
+HyperCine::bit_depth() const{
+  return bitmap_header_.bit_depth;
+}
+
+/// return the bit depth (this is an enum)
+uint16_t
+HyperCine::frame_rate() const{
+  return bitmap_header_.frame_rate;
+}
+
+/// return the bit count (either 8 or 16, BIT_DEPTH_8=8, BIT_DEPTH_!0_PACKED=8, BIT_DEPTH_16=16)
+int
+HyperCine::bit_count() const{
+  return bitmap_header_.bit_count;
+}
+
+/// return the range of intensity values for this cine file (not the max value but the max possible value)
+int
+HyperCine::max_possible_intensity()const {
+  return bitmap_header_.clr_important - 1;
+}
+
+/// return a copy of the current hyperframe
+HyperCine::HyperFrame *
+HyperCine::hyperframe(){
+  return & hf_;
+}
+
+/// return the image width, or the width of a window if specified
+int
+HyperCine::width(const int window_id)const{
+   if(window_id==-1) return bitmap_header_.width;
+   else return hf_.window_width(window_id);
+};
+
+/// return the image height, or the height of a window if specified
+int
+HyperCine::height(const int window_id)const{
+  if(window_id==-1) return bitmap_header_.height;
+  else return hf_.window_height(window_id);
+};
+
+/// return the first frame id
+int
+HyperCine::file_first_frame_id()const{
+  return header_.first_image_no;
+}
+
+/// return the number of frames in the entire file
+int
+HyperCine::file_frame_count()const{
+  return header_.image_count;
+}
+
+/// returns true if the window has been loaded into the data buffer
+bool
+HyperCine::buffer_has_frame_window(const int frame,
+  const size_t x_begin,
+  const size_t x_count,
+  const size_t y_begin,
+  const size_t y_count){
+  return buffer_has_frame(frame) && hf_.window_id(x_begin,x_count,y_begin,y_count)>=0;
+}
+
+/// returns the OpenCV macro integer, CV_16UC1 (integer value 2), CV_32FC1 (integer value 5), etc.
+/// needed to initialize an OpenCV Mat so that the data storage is appropriately sized
+int
+HyperCine::opencv_data_type()const{
+  return OPENCV_DATA_TYPE;
+}
+
+/// return the type of conversion that was used for 10bit packed
+HyperCine::Bit_Depth_Conversion_Type
+HyperCine::conversion_type()const{
+  return conversion_type_;
+}
+
+/// return the conversion factor needed to convert the intensity values in the memory
+/// buffer to 8 bit
+float
+HyperCine::conversion_factor_to_8_bit()const{
+  return 255.0f/(bitmap_header_.clr_important-1.0f);
+}
+
+/// return the conversion factor needed to convert the intensity values in the memory
+/// buffer to 16 bit
+float
+HyperCine::conversion_factor_to_16_bit()const{
+  return 65535.0f/(bitmap_header_.clr_important-1.0f);
+}
+
 } // end namespace hypercine

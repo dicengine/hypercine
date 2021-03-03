@@ -327,53 +327,43 @@ public:
   void read_buffer();
 
   /// return pointer to the cine file header
-  CineFileHeader * header(){return &header_;}
+  CineFileHeader * header();
 
   /// return pointer to the bitmap header
-  BitmapHeader * bitmap_header(){return &bitmap_header_;}
+  BitmapHeader * bitmap_header();
 
   /// return a pointer to the image offsets
-  std::vector<int64_t> * image_offsets(){return &image_offsets_;}
+  std::vector<int64_t> * image_offsets();
 
   /// return the filename
-  std::string file_name()const{return file_name_;}
+  std::string file_name()const;
 
   /// return the bit depth (this is an enum)
-  Bit_Depth bit_depth() const{return bitmap_header_.bit_depth;}
+  Bit_Depth bit_depth() const;
 
   /// return the bit depth (this is an enum)
-  uint16_t frame_rate() const{return bitmap_header_.frame_rate;}
+  uint16_t frame_rate() const;
 
   /// return the bit count (either 8 or 16, BIT_DEPTH_8=8, BIT_DEPTH_!0_PACKED=8, BIT_DEPTH_16=16)
-  int bit_count() const{return bitmap_header_.bit_count;}
+  int bit_count() const;
 
   /// return the range of intensity values for this cine file (not the max value but the max possible value)
-  int max_possible_intensity()const {return bitmap_header_.clr_important - 1;}
+  int max_possible_intensity()const;
 
   /// return a copy of the current hyperframe
-  HyperFrame * hyperframe(){return & hf_;}
+  HyperFrame * hyperframe();
 
   /// return the image width, or the width of a window if specified
-  int width(const int window_id=-1)const{
-     if(window_id==-1) return bitmap_header_.width;
-     else return hf_.window_width(window_id);
-  };
+  int width(const int window_id=-1)const;
 
   /// return the image height, or the height of a window if specified
-  int height(const int window_id=-1)const{
-    if(window_id==-1) return bitmap_header_.height;
-    else return hf_.window_height(window_id);
-  };
+  int height(const int window_id=-1)const;
 
   /// return the first frame id
-  int file_first_frame_id()const{
-    return header_.first_image_no;
-  }
+  int file_first_frame_id()const;
 
   /// return the number of frames in the entire file
-  int file_frame_count()const{
-    return header_.image_count;
-  }
+  int file_frame_count()const;
 
   /// returns true if the frame has been loaded into the data buffer
   bool buffer_has_frame(const int frame) const;
@@ -386,9 +376,7 @@ public:
     const size_t x_begin,
     const size_t x_count,
     const size_t y_begin,
-    const size_t y_count){
-    return buffer_has_frame(frame) && hf_.window_id(x_begin,x_count,y_begin,y_count)>=0;
-  }
+    const size_t y_count);
 
   /// return a pointer to the raw data for a given frame, and window
   /// if the frame is valid, but out of range of what is loaded in the buffer
@@ -425,24 +413,18 @@ public:
 
   /// returns the OpenCV macro integer, CV_16UC1 (integer value 2), CV_32FC1 (integer value 5), etc.
   /// needed to initialize an OpenCV Mat so that the data storage is appropriately sized
-  int opencv_data_type()const{return OPENCV_DATA_TYPE;}
+  int opencv_data_type()const;
 
   /// return the type of conversion that was used for 10bit packed
-  Bit_Depth_Conversion_Type conversion_type()const{
-    return conversion_type_;
-  }
+  Bit_Depth_Conversion_Type conversion_type()const;
 
   /// return the conversion factor needed to convert the intensity values in the memory
   /// buffer to 8 bit
-  float conversion_factor_to_8_bit()const{
-    return 255.0f/(bitmap_header_.clr_important-1.0f);
-  }
+  float conversion_factor_to_8_bit()const;
 
   /// return the conversion factor needed to convert the intensity values in the memory
   /// buffer to 16 bit
-  float conversion_factor_to_16_bit()const{
-    return 65535.0f/(bitmap_header_.clr_important-1.0f);
-  }
+  float conversion_factor_to_16_bit()const;
 
   // write a frame to cine file
   // NOTE only implemented for 16bit values currently
