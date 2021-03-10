@@ -427,9 +427,9 @@ public:
   float conversion_factor_to_16_bit()const;
 
   // write a frame to cine file
-  // NOTE only implemented for 16bit values currently
   static void write_frame(const char * file_name, const size_t width,
-    const size_t height, uint16_t * data, const bool overwrite=false);
+    const size_t height, uint16_t * data, const bool overwrite=false,
+    const bool convert_to_8bit=false);
 
   // write a cine file header
   static void write_header(const char * file_name, const size_t width,

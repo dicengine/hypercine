@@ -1082,9 +1082,10 @@ HyperCine::write_frame(const char * file_name,
   const size_t width,
   const size_t height,
   uint16_t * data,
-  const bool overwrite){ // for both 8 bit and 16 bit the frame is written upside down
+  const bool overwrite,
+  const bool convert_to_8bit){ // for both 8 bit and 16 bit the frame is written upside down
 
-  uint16_t bit_count = 16;
+  uint16_t bit_count = convert_to_8bit ? 8 : 16;
 
   // check if file exists
   std::ifstream existing_cine_file(file_name);
@@ -1145,9 +1146,18 @@ HyperCine::write_frame(const char * file_name,
   cine_file.seekp(0,std::ios::end);
 
   // data needs to be written upside down
-  for(size_t y=0;y<height;++y){
-    for(size_t x=0;x<width;++x){
-      cine_file.write(reinterpret_cast<char*>(&data[(height-y-1)*width+x]), sizeof(uint16_t));
+  if(convert_to_8bit){
+    for(size_t y=0;y<height;++y){
+      for(size_t x=0;x<width;++x){
+        uint8_t value =  static_cast<uint8_t>(data[(height-y-1)*width+x]); // truncating for now, but may need to provide a conversion factor.
+        cine_file.write(reinterpret_cast<char*>(&value), sizeof(uint8_t));
+      }
+    }
+  }else{
+    for(size_t y=0;y<height;++y){
+      for(size_t x=0;x<width;++x){
+        cine_file.write(reinterpret_cast<char*>(&data[(height-y-1)*width+x]), sizeof(uint16_t));
+      }
     }
   }
   cine_file.close();
