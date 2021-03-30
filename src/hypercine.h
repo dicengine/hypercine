@@ -291,6 +291,8 @@ public:
     size_t window_x_begin(const size_t window_id)const;
     // return the x begin for the selected window
     size_t window_y_begin(const size_t window_id)const;
+    // return the max window height of all the windows
+    size_t max_window_height()const;
     // returns the number of pixels required to store an entire row for the widest window
     size_t buffer_row_size()const;
   private:

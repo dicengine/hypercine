@@ -323,6 +323,15 @@ HyperCine::HyperFrame::window_y_begin(const size_t window_id)const{
   return y_begin_[window_id];
 }
 
+// return the max window height of all the windows
+size_t
+HyperCine::HyperFrame::max_window_height()const{
+  size_t max_height = 0;
+  for(size_t i=0;i<num_windows();++i)
+    if(window_height(i)>max_height) max_height = window_height(i);
+  return max_height;
+}
+
 // returns the number of pixels required to store an entire row for the widest window
 size_t
 HyperCine::HyperFrame::buffer_row_size()const{
@@ -984,8 +993,8 @@ HyperCine::read_hyperframe_10_bit_packed(){
   DEBUG_MSG("HyperCine::read_hyperframe_10_bit_packed():");
 
   // chunks of memory will be read into a buffer one window and one frame at a time
-  // current strategy is to read one row of one window, but only the width of the window for each read
-  // and seekg between each row of the window to skip the rest of the row
+  // current strategy is to read the entire width of the image for the rows in the window, then pull from
+  // that buffer to populate the hypercine buffer.
 
   // open the file
   std::ifstream cine_file(file_name_.c_str(), std::ios::in | std::ios::binary);
@@ -994,8 +1003,7 @@ HyperCine::read_hyperframe_10_bit_packed(){
     throw std::exception();
   }
   // the buffer needs to be sized as big as the largest row among the windows in the hyperframe
-  const int window_row_buffer_size = ceil(((hf_.buffer_row_size()+1)*10)/8); // 10 bits per pixel divided by 8 to get bytes, +1 to oversize
-  ASSERT_OR_EXCEPTION(((hf_.buffer_row_size()+1)*10)/8<=window_row_buffer_size);
+  const int window_row_buffer_size = hf_.max_window_height() * bitmap_header_.width * 10/8;
   std::vector<char> window_row_buffer(window_row_buffer_size);
   DEBUG_MSG("HyperCine::read_buffer(): window row buffer storage size " << window_row_buffer.size());
   // position to the first frame in this set:
@@ -1011,18 +1019,20 @@ HyperCine::read_hyperframe_10_bit_packed(){
     const int64_t frame_offset = image_offsets_[frame] + header_.header_offset;
     // iterate the regions of interest
     for(size_t window=0; window<hf_.num_windows();++window){
+      data_indices_.find(*set_it)->second[window] = total_px_read;
+      // read all rows that contain this window
       const size_t window_width = hf_.window_width(window);
+      const size_t window_height = hf_.window_height(window);
       const size_t window_x_begin = hf_.window_x_begin(window);
       const int xbegin_mod_4 = hf_.window_x_begin(window)%4;
-      data_indices_.find(*set_it)->second[window] = total_px_read;
-      // iterate the window rows
-      for(size_t row=hf_.window_y_begin(window);row<hf_.window_y_begin(window)+hf_.window_height(window);++row){
-        const size_t row_inc = row*bitmap_header_.width;
-        // determine the position of the first pixel in the this row of this window
-        const int64_t begin_window_row = frame_offset + ((row_inc + window_x_begin)*10)/8; // convert the number of pixels up to this point to number of bytes to hold 10bit pixel values
-        cine_file.seekg(begin_window_row);
-        cine_file.read(&window_row_buffer[0],window_row_buffer_size);
-        // unpack the 10 bit image data from the array
+      const int64_t begin_window_row = frame_offset + hf_.window_y_begin(window)*bitmap_header_.width*10/8; // convert the number of pixels up to this point to number of bytes to hold 10bit pixel values
+      cine_file.seekg(begin_window_row);
+      const int buffer_read_size = window_height*bitmap_header_.width*10/8;
+      cine_file.read(&window_row_buffer[0],buffer_read_size); // read entire row for each row in this window
+
+      // iterate the window rows and put the values into the storage buffer
+      // unpack the 10 bit image data from the array
+      for(size_t row=0;row<window_height;++row){
         for(size_t px=0;px<window_width;++px){
           // and now to index into the strange beast that is 10bit packed cine files...
           // this looks strange because the ten bits are shared across bytes, the first byte has 1 10bit number, with 2 bits spilling into the
@@ -1031,7 +1041,7 @@ HyperCine::read_hyperframe_10_bit_packed(){
           // the fourth byte has 6 bits from the last 10bit value, 2 bits of its own, and spills 8 into the next byte, filling that byte
           // so in total it takes 5 bytes for every 4 10bit values
           const size_t col_inc = px+window_x_begin;
-          const size_t slot = (px+xbegin_mod_4)*10/8 - xbegin_mod_4;
+          const size_t slot = (row*bitmap_header_.width + window_x_begin)*10/8 + (px+xbegin_mod_4)*10/8 - xbegin_mod_4;
           const size_t chunk_offset = col_inc%4; // 5 bytes per four pixels
           // create the single 16 bit combo
           intensity_16p1 = window_row_buff_ptr[slot+1];
