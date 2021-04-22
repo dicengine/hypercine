@@ -1190,7 +1190,7 @@ HyperCine::write_header(const char * file_name, const size_t width, const size_t
   uint32_t image_width = width;
   uint32_t image_height = height;
   uint32_t image_size = width*height*(bit_count/8);
-  uint32_t clr_important = bit_count == 8 ? 256 : 65536;
+  uint32_t clr_important = bit_count == 8 ? 256 : 4096; // rarely does the actual 16bit depth get used: 65536;
   TIME64 dummy_time;
   uint64_t dummy_offset = 0;
 
